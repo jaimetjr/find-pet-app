@@ -16,14 +16,32 @@ const ActiveFilters: React.FC<ActiveFiltersProps> = ({ filters, onRemoveFilter, 
   const theme = useTheme()
 
   // Get all active filters as a flat array of {category, value} objects
-  const activeFilters = Object.entries(filters).flatMap(([category, values]) =>
-    values.map((value) => ({
-      category: category as keyof FilterOptions,
-      value,
-      // Map the raw values to display labels
-      displayValue: getDisplayValue(category as keyof FilterOptions, value),
-    })),
-  )
+  const activeFilters = Object.entries(filters)
+    .flatMap(([category, values]) => {
+      // Handle distance filter (which is a string, not an array)
+      if (category === "distance" && values) {
+        return [
+          {
+            category: category as keyof FilterOptions,
+            value: values as string,
+            displayValue: getDistanceDisplayValue(values as string),
+          },
+        ]
+      }
+
+      // Handle array-based filters (make sure values is an array before mapping)
+      if (Array.isArray(values) && values.length > 0) {
+        return values.map((value) => ({
+          category: category as keyof FilterOptions,
+          value,
+          displayValue: getDisplayValue(category as keyof FilterOptions, value),
+        }))
+      }
+
+      // Return empty array if values is not valid
+      return []
+    })
+    .filter((filter) => filter.value !== "") // Filter out empty values
 
   if (activeFilters.length === 0) {
     return null
@@ -77,6 +95,13 @@ function getDisplayValue(category: keyof FilterOptions, value: string): string {
   }
 
   return value
+}
+
+// Helper function to convert distance values to display labels
+function getDistanceDisplayValue(value: string): string {
+  if (!value) return ""
+
+  return `Até ${value} km`
 }
 
 const styles = StyleSheet.create({

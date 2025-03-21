@@ -1,9 +1,12 @@
 "use client"
 
 import type React from "react"
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions } from "react-native"
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from "react-native"
+import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { useTheme } from "../context/ThemeContext"
+import { useFavorites } from "../context/FavoritesContext"
 import type { PetDetailScreenRouteProp } from "../types/navigation"
+import PhotoGallery from "../components/PhotoGallery"
 
 const { width } = Dimensions.get("window")
 
@@ -27,10 +30,38 @@ const InfoItem: React.FC<InfoItemProps> = ({ label, value, theme }) => (
 const PetDetailScreen: React.FC<PetDetailScreenProps> = ({ route }) => {
   const pet = route.params
   const theme = useTheme()
+  const { isFavorite, addFavorite, removeFavorite } = useFavorites()
+
+  const petIsFavorite = isFavorite(pet.id)
+
+  const toggleFavorite = () => {
+    if (petIsFavorite) {
+      removeFavorite(pet.id)
+    } else {
+      addFavorite(pet.id)
+    }
+  }
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Image source={{ uri: pet.imageUrl }} style={styles.petImage} resizeMode="cover" />
+      <View style={styles.imageContainer}>
+        <PhotoGallery images={pet.images} initialIndex={0} />
+        <TouchableOpacity
+          style={[
+            styles.favoriteButton,
+            {
+              backgroundColor: petIsFavorite ? theme.colors.primary : theme.colors.card,
+            },
+          ]}
+          onPress={toggleFavorite}
+        >
+          <MaterialCommunityIcons
+            name={petIsFavorite ? "heart" : "heart-outline"}
+            size={24}
+            color={petIsFavorite ? theme.colors.text : theme.colors.primary}
+          />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.contentContainer}>
         <View style={styles.header}>
@@ -76,9 +107,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  petImage: {
-    width: width,
-    height: width * 0.8,
+  imageContainer: {
+    position: "relative",
+  },
+  favoriteButton: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   contentContainer: {
     padding: 16,

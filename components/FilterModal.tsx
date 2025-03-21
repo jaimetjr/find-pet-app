@@ -11,9 +11,16 @@ type FilterModalProps = {
   onClose: () => void
   filters: FilterOptions
   onApplyFilters: (filters: FilterOptions) => void
+  hasLocationPermission: boolean
 }
 
-const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, filters, onApplyFilters }) => {
+const FilterModal: React.FC<FilterModalProps> = ({
+  visible,
+  onClose,
+  filters,
+  onApplyFilters,
+  hasLocationPermission,
+}) => {
   const theme = useTheme()
   const [tempFilters, setTempFilters] = React.useState<FilterOptions>(filters)
 
@@ -22,20 +29,28 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, filters, on
   }, [filters, visible])
 
   const handleSelectFilter = (category: keyof FilterOptions, value: string) => {
-    setTempFilters((prev) => {
-      // If the value is already selected, remove it
-      if (prev[category].includes(value)) {
+    if (category === "distance") {
+      // For distance, we only want one value selected
+      setTempFilters((prev) => ({
+        ...prev,
+        distance: prev.distance === value ? "" : value,
+      }))
+    } else {
+      setTempFilters((prev) => {
+        // If the value is already selected, remove it
+        if (prev[category].includes(value)) {
+          return {
+            ...prev,
+            [category]: prev[category].filter((item) => item !== value),
+          }
+        }
+        // Otherwise, add it
         return {
           ...prev,
-          [category]: prev[category].filter((item) => item !== value),
+          [category]: [...prev[category], value],
         }
-      }
-      // Otherwise, add it
-      return {
-        ...prev,
-        [category]: [...prev[category], value],
-      }
-    })
+      })
+    }
   }
 
   const handleClearFilters = () => {
@@ -45,6 +60,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, filters, on
       size: [],
       ageRange: [],
       location: [],
+      distance: "",
     })
   }
 
@@ -54,6 +70,9 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, filters, on
   }
 
   const isFilterSelected = (category: keyof FilterOptions, value: string) => {
+    if (category === "distance") {
+      return tempFilters.distance === value
+    }
     return tempFilters[category].includes(value)
   }
 
@@ -176,6 +195,20 @@ const FilterModal: React.FC<FilterModalProps> = ({ visible, onClose, filters, on
                   { value: "Brasília", label: "Brasília" },
                 ]}
               />
+
+              {hasLocationPermission && (
+                <FilterSection
+                  title="Distância (km)"
+                  category="distance"
+                  options={[
+                    { value: "5", label: "Até 5 km" },
+                    { value: "10", label: "Até 10 km" },
+                    { value: "25", label: "Até 25 km" },
+                    { value: "50", label: "Até 50 km" },
+                    { value: "100", label: "Até 100 km" },
+                  ]}
+                />
+              )}
             </ScrollView>
 
             <View style={styles.modalFooter}>

@@ -1,6 +1,7 @@
 "use client"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { Feather } from "@expo/vector-icons"
+import { TouchableOpacity } from "react-native"
 import { useTheme } from "../context/ThemeContext"
 import HomeScreen from "../screens/HomeScreen"
 import FavoritesScreen from "../screens/FavoritesScreen"
@@ -8,7 +9,7 @@ import type { RootTabParamList } from "../types/navigation"
 
 const Tab = createBottomTabNavigator<RootTabParamList>()
 
-const BottomTabNavigator = () => {
+const BottomTabNavigator = ({ navigation }: any) => {
   const theme = useTheme()
 
   return (
@@ -27,6 +28,11 @@ const BottomTabNavigator = () => {
         headerTitleStyle: {
           fontWeight: "bold",
         },
+        headerLeft: () => (
+          <TouchableOpacity style={{ marginLeft: 16 }} onPress={() => navigation.openDrawer()}>
+            <Feather name="menu" size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+        ),
       }}
     >
       <Tab.Screen

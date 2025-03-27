@@ -22,7 +22,7 @@ export const emptyFilters: FilterOptions = {
 export function matchesFilters(
   pet: any,
   filters: FilterOptions,
-  userLocation?: { latitude: number; longitude: number },
+  userLocation: { latitude: number; longitude: number } | null | undefined,
 ): boolean {
   // If no filters are applied, show all pets
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
@@ -84,6 +84,12 @@ export function matchesFilters(
         return false
       }
     }
+  } else if (filters.distance && !userLocation) {
+    // If distance filter is applied but no user location is available,
+    // we can't calculate distance, so we should return false
+    // However, this might be too restrictive, so we'll just ignore the distance filter
+    // and let other filters apply
+    console.warn("Distance filter applied but user location is not available")
   }
 
   // If all filters pass, the pet matches

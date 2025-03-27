@@ -17,7 +17,7 @@ import { Feather } from "@expo/vector-icons"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { useTheme } from "../context/ThemeContext"
 import { petData, type Pet } from "../data/pets"
-import type { HomeScreenNavigationProp } from "../types/navigation"
+import type { HomeScreenNavigationProp, HomeScreenRouteProp } from "../types/navigation"
 import FilterModal from "../components/FilterModal"
 import ActiveFilters from "../components/ActiveFilters"
 import PetMapView from "../components/PetMapView"
@@ -26,6 +26,7 @@ import { LocationService } from "../services/LocationService"
 import type { Coordinates } from "../types/location"
 import { useFavorites } from "../context/FavoritesContext"
 import ImageCarousel from "../components/ImageCarousel"
+import { useRoute } from "@react-navigation/native"
 
 type HomeScreenProps = {
   navigation: HomeScreenNavigationProp
@@ -33,6 +34,7 @@ type HomeScreenProps = {
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const theme = useTheme()
+  const route = useRoute<HomeScreenRouteProp>()
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [filters, setFilters] = useState<FilterOptions>(emptyFilters)
   const [filterModalVisible, setFilterModalVisible] = useState<boolean>(false)
@@ -58,6 +60,43 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     requestLocationPermission()
   }, [])
 
+  // Check for filters from route params
+  useEffect(() => {
+    // Safely access route params
+    const routeParams = route.params || {}
+    const routeFilters = routeParams.filters
+    const routeSearchQuery = routeParams.searchQuery
+
+    if (routeFilters) {
+      // If distance filter is applied but no location permission, show alert
+      if (routeFilters.distance && !hasLocationPermission) {
+        Alert.alert(
+          "Permissão de localização necessária",
+          "Para filtrar por distância, precisamos da sua localização. Por favor, conceda permissão nas configurações do seu dispositivo.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                // Apply filters without the distance filter
+                const filtersWithoutDistance = {
+                  ...routeFilters,
+                  distance: "",
+                }
+                setFilters(filtersWithoutDistance)
+              },
+            },
+          ],
+        )
+      } else {
+        setFilters(routeFilters)
+      }
+    }
+
+    if (routeSearchQuery) {
+      setSearchQuery(routeSearchQuery)
+    }
+  }, [route.params, hasLocationPermission])
+
   // Apply both search and filters whenever they change
   useEffect(() => {
     applyFiltersAndSearch()
@@ -67,7 +106,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     let results = petData
 
     // Apply filters
-    results = results.filter((pet) => matchesFilters(pet, filters, userLocation!))
+    results = results.filter((pet) => matchesFilters(pet, filters, userLocation))
 
     // Apply search query
     if (searchQuery) {

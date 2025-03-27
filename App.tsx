@@ -2,8 +2,9 @@ import { NavigationContainer } from "@react-navigation/native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { StatusBar } from "expo-status-bar"
 import { SafeAreaProvider } from "react-native-safe-area-context"
+import { GestureHandlerRootView } from "react-native-gesture-handler"
 
-import BottomTabNavigator from "./navigation/BottomTabNavigator"
+import DrawerNavigator from "./navigation/DrawerNavigator"
 import PetDetailScreen from "./screens/PetDetailScreen"
 import { ThemeProvider } from "./context/ThemeContext"
 import { FavoritesProvider } from "./context/FavoritesContext"
@@ -14,38 +15,40 @@ const Stack = createNativeStackNavigator<RootStackParamList>()
 
 export default function App(): JSX.Element {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <FavoritesProvider allPets={petData}>
-          <NavigationContainer>
-            <StatusBar style="auto" />
-            <Stack.Navigator
-              initialRouteName="Main"
-              screenOptions={{
-                headerShown: false,
-              }}
-            >
-              <Stack.Screen name="Main" component={BottomTabNavigator} />
-              <Stack.Screen
-                name="PetDetail"
-                component={PetDetailScreen}
-                options={{
-                  headerShown: true,
-                  headerStyle: {
-                    backgroundColor: "#F9B872", // Golden color
-                  },
-                  headerTintColor: "#7D4E24", // Dark brown
-                  headerTitleStyle: {
-                    fontWeight: "bold",
-                  },
-                  title: "Detalhes do Pet",
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <FavoritesProvider allPets={petData}>
+            <NavigationContainer>
+              <StatusBar style="auto" />
+              <Stack.Navigator
+                initialRouteName="Drawer"
+                screenOptions={{
+                  headerShown: false,
                 }}
-              />
-            </Stack.Navigator>
-          </NavigationContainer>
-        </FavoritesProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+              >
+                <Stack.Screen name="Drawer" component={DrawerNavigator} />
+                <Stack.Screen
+                  name="PetDetail"
+                  component={PetDetailScreen}
+                  options={{
+                    headerShown: true,
+                    headerStyle: {
+                      backgroundColor: "#F9B872", // Golden color
+                    },
+                    headerTintColor: "#7D4E24", // Dark brown
+                    headerTitleStyle: {
+                      fontWeight: "bold",
+                    },
+                    title: "Detalhes do Pet",
+                  }}
+                />
+              </Stack.Navigator>
+            </NavigationContainer>
+          </FavoritesProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   )
 }
 

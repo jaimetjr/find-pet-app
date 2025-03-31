@@ -27,6 +27,7 @@ import type { Coordinates } from "../types/location"
 import { useFavorites } from "../context/FavoritesContext"
 import ImageCarousel from "../components/ImageCarousel"
 import { useRoute } from "@react-navigation/native"
+import { useAuth } from "../context/AuthContext"
 
 type HomeScreenProps = {
   navigation: HomeScreenNavigationProp
@@ -42,6 +43,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null)
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean>(false)
   const [showMap, setShowMap] = useState<boolean>(false)
+
+  // Add this line to get auth context
+  const { isAuthenticated, user } = useAuth()
 
   const { isFavorite, addFavorite, removeFavorite } = useFavorites()
 
@@ -306,6 +310,33 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {/* Auth Status Banner */}
+      <View
+        style={[
+          styles.authBanner,
+          {
+            backgroundColor: isAuthenticated ? theme.colors.primary : theme.colors.secondary,
+            borderColor: theme.colors.border,
+          },
+        ]}
+      >
+        {isAuthenticated ? (
+          <View style={styles.authContent}>
+            <Text style={[styles.authText, { color: theme.colors.text }]}>Olá, {user?.name}! Você está conectado.</Text>
+            <TouchableOpacity style={styles.authButton} onPress={() => navigation.navigate("UserProfile")}>
+              <Text style={[styles.authButtonText, { color: theme.colors.text }]}>Perfil</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.authContent}>
+            <Text style={[styles.authText, { color: theme.colors.text }]}>Você não está conectado.</Text>
+            <TouchableOpacity style={styles.authButton} onPress={() => navigation.navigate("Login")}>
+              <Text style={[styles.authButtonText, { color: theme.colors.text }]}>Entrar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
       <View style={styles.searchFilterContainer}>
         <View
           style={[
@@ -555,6 +586,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   imageCountText: {
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  authBanner: {
+    padding: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  authContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  authText: {
+    fontSize: 14,
+    fontWeight: "500",
+    flex: 1,
+  },
+  authButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+  },
+  authButtonText: {
     fontSize: 12,
     fontWeight: "bold",
   },

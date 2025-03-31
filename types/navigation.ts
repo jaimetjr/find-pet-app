@@ -30,6 +30,7 @@ export type DrawerParamList = {
   UserProfile: undefined
   CreateUser: undefined
   CreatePet: undefined
+  Login: undefined
 }
 
 // Define the tab navigator param list with params
@@ -66,14 +67,13 @@ export type CreateUserScreenNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>
 >
 
-export type CreatePetScreenNavigationProp = CompositeNavigationProp<
-  DrawerNavigationProp<DrawerParamList, "CreatePet">,
+export type LoginScreenNavigationProp = CompositeNavigationProp<
+  DrawerNavigationProp<DrawerParamList, "Login">,
   NativeStackNavigationProp<RootStackParamList>
 >
 
-// We're keeping this type for now in case it's used elsewhere
-export type AdvancedSearchScreenNavigationProp = CompositeNavigationProp<
-  DrawerNavigationProp<DrawerParamList>,
+export type CreatePetScreenNavigationProp = CompositeNavigationProp<
+  DrawerNavigationProp<DrawerParamList, "CreatePet">,
   NativeStackNavigationProp<RootStackParamList>
 >
 

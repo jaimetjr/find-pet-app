@@ -38,7 +38,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: GOOGLE_CLIENT_ID,
+    clientId: '951774527965-2b6e46klmf4f5bto7kvegvt0oi8cljbm.apps.googleusercontent.com',
+    clientSecret: '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',
     iosClientId: GOOGLE_CLIENT_ID,
     androidClientId: GOOGLE_CLIENT_ID,
   });

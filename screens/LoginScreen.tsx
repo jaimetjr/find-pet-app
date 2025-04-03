@@ -18,6 +18,10 @@ import { Feather } from "@expo/vector-icons"
 import { useTheme } from "../context/ThemeContext"
 import { useAuth } from "../context/AuthContext"
 import type { LoginScreenNavigationProp } from "../types/navigation"
+// import * as WebBrowser from 'expo-web-browser'
+
+// Initialize WebBrowser for OAuth - COMMENTED OUT FOR NOW
+// WebBrowser.maybeCompleteAuthSession();
 
 type LoginScreenProps = {
   navigation: LoginScreenNavigationProp
@@ -47,14 +51,34 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   }
 
+  // Google login handler - COMMENTED OUT FOR NOW
   const handleGoogleLogin = async () => {
+    Alert.alert("Não implementado", "Login com Google será implementado em breve.")
+    /* Original implementation:
     try {
       await googleLogin()
       // Navigation will happen after successful login in the auth context
     } catch (err) {
       console.error("Google login failed:", err)
     }
+    */
   }
+
+  // Debug function - COMMENTED OUT FOR NOW
+  /*
+  const showOAuthDebugInfo = () => {
+    const redirectUri = Platform.select({
+      android: 'com.achandolar.app:/oauth2redirect',
+      ios: 'com.achandolar.app://oauth2redirect',
+      default: 'https://auth.expo.io/@your-expo-username/achando-lar'
+    });
+    
+    Alert.alert(
+      "OAuth Debug Info",
+      `Platform: ${Platform.OS}\nRedirect URI: ${redirectUri}\n\nMake sure this URI is added to your Google Cloud Console.`
+    );
+  }
+  */
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -141,6 +165,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
             </View>
 
+            {/* Google login button - COMMENTED OUT BUT KEPT AS PLACEHOLDER */}
             <TouchableOpacity
               style={[styles.googleButton, { backgroundColor: "#fff" }]}
               onPress={handleGoogleLogin}
@@ -148,9 +173,18 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             >
               <View style={styles.googleButtonContent}>
                 <Feather name="chrome" size={20} color="#4285F4" style={styles.googleIcon} />
-                <Text style={styles.googleButtonText}>Entrar com Google</Text>
+                <Text style={styles.googleButtonText}>Entrar com Google (Em breve)</Text>
               </View>
             </TouchableOpacity>
+
+            {/* Debug button - COMMENTED OUT FOR NOW 
+            <TouchableOpacity
+              style={[styles.debugButton]}
+              onPress={showOAuthDebugInfo}
+            >
+              <Text style={styles.debugButtonText}>Debug OAuth Config</Text>
+            </TouchableOpacity>
+            */}
 
             <View style={styles.registerContainer}>
               <Text style={[styles.registerText, { color: theme.colors.text }]}>Não tem uma conta?</Text>
@@ -274,6 +308,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#444",
+  },
+  debugButton: {
+    padding: 8,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  debugButtonText: {
+    fontSize: 14,
+    color: "#666",
+    textDecorationLine: "underline",
   },
   registerContainer: {
     flexDirection: "row",

@@ -91,6 +91,7 @@ const AuthService = {
       method: "GET",
       headers,
     })
+    console.log("OII", response)
 
     return handleResponse(response)
   },

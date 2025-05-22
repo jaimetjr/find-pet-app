@@ -3,12 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer"
 import { Feather } from "@expo/vector-icons"
 import { useTheme } from "../context/ThemeContext"
-import { useAuth } from "../context/AuthContext"
 import BottomTabNavigator from "./BottomTabNavigator"
 import UserProfileScreen from "../screens/UserProfileScreen"
 import CreateUserScreen from "../screens/CreateUserScreen"
 import CreatePetScreen from "../screens/CreatePetScreen"
-import LoginScreen from "../screens/LoginScreen"
 import type { DrawerParamList } from "../types/navigation"
 
 const Drawer = createDrawerNavigator<DrawerParamList>()
@@ -16,13 +14,6 @@ const Drawer = createDrawerNavigator<DrawerParamList>()
 // Custom drawer content component
 const CustomDrawerContent = (props: any) => {
   const theme = useTheme()
-  const { user, isAuthenticated, logout } = useAuth()
-
-  const handleLogout = async () => {
-    await logout()
-    props.navigation.closeDrawer()
-    props.navigation.navigate("Main")
-  }
 
   return (
     <DrawerContentScrollView
@@ -36,12 +27,8 @@ const CustomDrawerContent = (props: any) => {
             <Feather name="user" size={30} color={theme.colors.text} />
           </View>
           <View style={styles.userTextContainer}>
-            <Text style={[styles.userName, { color: theme.colors.text }]}>
-              {isAuthenticated ? user?.name : "Convidado"}
-            </Text>
-            <Text style={[styles.userSubtitle, { color: theme.colors.text }]}>
-              {isAuthenticated ? user?.email : "Faça login ou cadastre-se"}
-            </Text>
+            <Text style={[styles.userName, { color: theme.colors.text }]}>Convidado</Text>
+            <Text style={[styles.userSubtitle, { color: theme.colors.text }]}>Faça login ou cadastre-se</Text>
           </View>
         </View>
       </View>
@@ -50,24 +37,24 @@ const CustomDrawerContent = (props: any) => {
         <DrawerItemList {...props} />
       </View>
 
-      {isAuthenticated && (
-        <View style={styles.drawerFooter}>
-          <TouchableOpacity
-            style={[styles.logoutButton, { borderTopColor: theme.colors.border }]}
-            onPress={handleLogout}
-          >
-            <Feather name="log-out" size={20} color={theme.colors.text} />
-            <Text style={[styles.logoutText, { color: theme.colors.text }]}>Sair</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={styles.drawerFooter}>
+        <TouchableOpacity
+          style={[styles.logoutButton, { borderTopColor: theme.colors.border }]}
+          onPress={() => {
+            // Handle logout or close drawer
+            props.navigation.closeDrawer()
+          }}
+        >
+          <Feather name="log-out" size={20} color={theme.colors.text} />
+          <Text style={[styles.logoutText, { color: theme.colors.text }]}>Sair</Text>
+        </TouchableOpacity>
+      </View>
     </DrawerContentScrollView>
   )
 }
 
 const DrawerNavigator = () => {
   const theme = useTheme()
-  const { isAuthenticated } = useAuth()
 
   return (
     <Drawer.Navigator
@@ -112,35 +99,22 @@ const DrawerNavigator = () => {
           drawerIcon: ({ color, size }) => <Feather name="user" color={color} size={size} />,
         }}
       />
-
-      <Drawer.Screen
-        name="Login"
-        component={LoginScreen}
-        options={{
-          title: "Entrar",
-          drawerIcon: ({ color, size }) => <Feather name="log-in" color={color} size={size} />,
-          drawerItemStyle: isAuthenticated ? { display: "none" } : undefined,
-        }}
-      />
       <Drawer.Screen
         name="CreateUser"
         component={CreateUserScreen}
         options={{
           title: "Criar Conta",
           drawerIcon: ({ color, size }) => <Feather name="user-plus" color={color} size={size} />,
-          drawerItemStyle: isAuthenticated ? { display: "none" } : undefined,
         }}
       />
-      {isAuthenticated && (
-        <Drawer.Screen
-          name="CreatePet"
-          component={CreatePetScreen}
-          options={{
-            title: "Cadastrar Pet",
-            drawerIcon: ({ color, size }) => <Feather name="plus-circle" color={color} size={size} />,
-          }}
-        />
-      )}
+      <Drawer.Screen
+        name="CreatePet"
+        component={CreatePetScreen}
+        options={{
+          title: "Cadastrar Pet",
+          drawerIcon: ({ color, size }) => <Feather name="plus-circle" color={color} size={size} />,
+        }}
+      />
     </Drawer.Navigator>
   )
 }

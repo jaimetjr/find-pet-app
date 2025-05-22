@@ -13,8 +13,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.jaimetjr.findpetapp"
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
@@ -25,7 +24,6 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "scheme": "com.jaimetjr.findpetapp"
+    }
   }
 }

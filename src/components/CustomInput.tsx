@@ -73,31 +73,6 @@ export default function CustomInput<T extends FieldValues>({
             </View>
           )}
         </View>
-        /*<View style={styles.container}>
-          <Feather
-            name="lock"
-            size={20}
-            color={theme.colors.text}
-            style={styles.inputIcon}
-          />
-
-          <TextInput
-            {...props}
-            value={value}
-            onChangeText={onChange}
-            onBlur={onBlur}
-            style={[
-              styles.input,
-              props.style,
-              { borderColor: error ? "crimson" : "gray" },
-            ]}
-          />
-          {error ? (
-            <Text style={styles.error}>{error.message}</Text>
-          ) : (
-            <View style={{ height: 18 }} />
-          )}
-        </View>*/
       )}
     />
   );
@@ -108,7 +83,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputLabel: {
-    fontSize: 16,
+    fontSize: 14,
     marginBottom: 8,
   },
   inputWrapper: {

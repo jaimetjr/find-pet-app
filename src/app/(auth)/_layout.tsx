@@ -1,4 +1,4 @@
-import { useTheme } from '@/src/contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@clerk/clerk-expo';
 import { Redirect, Stack } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
@@ -38,6 +38,14 @@ export default function AuthLayout() {
       />
       <Stack.Screen 
         name="sign-up" 
+        options={{ 
+          headerStyle: { backgroundColor: theme.colors.background },
+          headerTitle: '',
+          headerShadowVisible: false,
+        }} 
+      />
+      <Stack.Screen 
+        name="verify" 
         options={{ 
           headerStyle: { backgroundColor: theme.colors.background },
           headerTitle: '',

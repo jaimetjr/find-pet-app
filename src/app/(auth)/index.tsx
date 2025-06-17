@@ -6,13 +6,41 @@ import {
   StyleSheet,
   Image,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useTheme } from "@/src/contexts/ThemeContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import SignInScreen from "../../components/SignIn";
+import CustomInput from "@/components/CustomInput";
+import { useForm } from "react-hook-form";
+import z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import SignInWith from "@/components/SignInWith";
+import SignIn from "../../components/SignIn";
+
+const signInSchema = z.object({
+  email: z.string({ message: "Email é obrigatório" }).email("Email inválido"),
+  password: z
+    .string({ message: "Senha é obrigatória" })
+    .min(8, "Senha deve ter pelo menos 8 caracteres"),
+});
+
+type SignInFields = z.infer<typeof signInSchema>;
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const {
+    control,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<SignInFields>({
+    resolver: zodResolver(signInSchema),
+  });
 
   return (
     <SafeAreaView
@@ -36,39 +64,11 @@ export default function WelcomeScreen() {
             Conectando pets especiais a lares amorosos
           </Text>
         </View>
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: theme.colors.primary }]}
-            onPress={() => router.push("/(auth)/sign-in")}
-          >
-            <Text style={[styles.buttonText, { color: theme.colors.text }]}>
-              Entrar
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: theme.colors.secondary }]}
-            onPress={() => router.push("/(auth)/sign-up")}
-          >
-            <Text style={[styles.buttonText, { color: theme.colors.text }]}>
-              Criar Conta
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: theme.colors.text }]}>
-            Ao continuar, você concorda com nossos Termos de Serviço e Política
-            de Privacidade
-          </Text>
+        <View style={styles.signInContainer}>
+          <SignIn />
         </View>
       </View>
     </SafeAreaView>
-    /*<View style={{ padding: 20 }}>
-      <Text style={{ fontSize: 24, marginBottom: 20 }}>Welcome to the App!</Text>
-      <Button title="Login" onPress={() => router.push('/(auth)/sign-in')} />
-      <View style={{ height: 10 }} />
-      <Button title="Sign Up" onPress={() => router.push('/(auth)/sign-up')} />
-    </View>*/
   );
 }
 
@@ -79,15 +79,16 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
-    justifyContent: "center",
+    justifyContent: "flex-start",
     alignItems: "center",
+    marginTop: 80,
   },
   logoContainer: {
-    width: 150,
-    height: 150,
+    width: 120,
+    height: 120,
     borderRadius: 75,
     overflow: "hidden",
-    marginBottom: 30,
+    marginBottom: 20,
   },
   logo: {
     width: "100%",
@@ -95,46 +96,21 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     alignItems: "center",
-    marginBottom: 40,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 10,
+    marginBottom: 5,
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 16,
-    textAlign: "center",
-    paddingHorizontal: 20,
-  },
-  buttonContainer: {
-    width: "100%",
-    marginBottom: 30,
-  },
-  button: {
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  guestButton: {
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  guestButtonText: {
-    fontSize: 14,
-  },
-  footer: {
-    paddingHorizontal: 20,
-  },
-  footerText: {
     fontSize: 12,
     textAlign: "center",
-    opacity: 0.7,
+    paddingHorizontal: 20,
+  },
+  signInContainer: {
+    width: "100%",
+    marginBottom: 30,
   },
 });

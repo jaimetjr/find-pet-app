@@ -1,8 +1,10 @@
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, Stack, useRouter } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
+import { useUserAuth } from '@/contexts/UserAuthContext';
+import { useEffect } from 'react';
 
 export default function ProtectedLayout() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded} = useAuth();
 
   if (!isLoaded) {
     return null;
@@ -15,6 +17,7 @@ export default function ProtectedLayout() {
   return (
     <Stack>
       <Stack.Screen name="home" options={{ headerShown: false }} />
+      <Stack.Screen name="profile-setup" options={{ headerShown: false }} />
     </Stack>
   );
 }

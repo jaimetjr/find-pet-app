@@ -36,9 +36,10 @@ export const register = async (model: RegisterUserDTO): Promise<UserDTO> => {
 export const getMe = async (clerkId: string): Promise<UserDTO | null> => {
   try { 
     const response = await api.get(`/auth/${clerkId}`);
+    console.log("response.data", response.data);
     return response.data;
   } catch (error) {
-    console.log(error);
+    console.log("ei", error);
     return null;
   }
 };

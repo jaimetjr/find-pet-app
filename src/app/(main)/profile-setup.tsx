@@ -21,6 +21,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import RNPickerSelect from "react-native-picker-select";
 import { brazilStates } from "@/helpers/states";
+import CustomDropdown from "@/components/CustomDropdown";
 
 const profileSetupSchema = z.object({
   phone: z
@@ -113,10 +114,12 @@ export default function ProfileSetup() {
   };
 
   const handleCepChange = async (cep: string) => {
+    console.log(cep);
     if (cep.length !== 8) return;
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
       const data = await response.json();
+      console.log(data);
       if (!data.erro) {
         setValue("address", data.logradouro || "");
         setValue("neighborhood", data.bairro || "");
@@ -186,43 +189,15 @@ export default function ProfileSetup() {
             />
             <CustomInput control={control} name="address" label="Endereço" />
             <CustomInput control={control} name="neighborhood" label="Bairro" />
-            <Text style={[styles.label, { color: theme.colors.text }]}>
-              Estado
-            </Text>
-            <Controller
-              control={control}
+
+            <CustomDropdown
               name="state"
-              render={({ field: { onChange, value } }) => (
-                <RNPickerSelect
-                  onValueChange={onChange}
-                  value={value}
-                  placeholder={{ label: "Selecione um estado", value: null }}
-                  items={brazilStates.map((state) => ({
-                    label: state.name,
-                    value: state.uf,
-                  }))}
-                  style={{
-                    inputIOS: {
-                      padding: 12,
-                      borderColor: '#ccc',
-                      borderWidth: 1,
-                      borderRadius: 8,
-                      color: theme.colors.text,
-                      marginBottom: 16,
-                      backgroundColor: theme.colors.background,
-                    },
-                                    inputAndroid: {
-                      padding: 12,
-                      borderColor: '#ccc',
-                      borderWidth: 1,
-                      borderRadius: 8,
-                      color: theme.colors.text,
-                      marginBottom: 16,
-                      backgroundColor: theme.colors.background,
-                    },
-                  }}
-                />
-              )}
+              control={control}
+              label="Estado"
+              options={brazilStates.map((s) => ({
+                label: s.name,
+                value: s.uf,
+              }))}
             />
 
             <CustomInput control={control} name="city" label="Cidade" />

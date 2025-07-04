@@ -49,9 +49,7 @@ export default function WelcomeScreen() {
       <View style={styles.content}>
         <View style={styles.logoContainer}>
           <Image
-            source={{
-              uri: "https://images.unsplash.com/photo-1633722715463-d30f4f325e24?q=80&w=1000&auto=format&fit=crop",
-            }}
+            source={require('@/assets/SimbaNala.png')}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -81,12 +79,12 @@ const styles = StyleSheet.create({
     padding: 20,
     justifyContent: "flex-start",
     alignItems: "center",
-    marginTop: 80,
+    marginTop: 40,
   },
   logoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 75,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
     overflow: "hidden",
     marginBottom: 20,
   },

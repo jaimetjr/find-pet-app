@@ -1,4 +1,5 @@
 import { Stack } from "expo-router";
+import { Drawer } from 'expo-router/drawer'
 import { ThemeProvider } from "../contexts/ThemeContext";
 import { ClerkProvider } from "@clerk/clerk-expo";
 import { tokenCache } from "@clerk/clerk-expo/token-cache";
@@ -9,6 +10,7 @@ export default function RootLayout() {
     <ThemeProvider>
       <UserAuthProvider>
         <ClerkProvider tokenCache={tokenCache}>
+
           <Stack>
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(main)" options={{ headerShown: false }} />

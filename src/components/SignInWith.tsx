@@ -1,8 +1,8 @@
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
-import appleButton from '../assets/apple.png';
-import googleButton from '../assets/google.png';
-import facebookButton from '../assets/facebook.png';
+import appleButton from '../assets/LogoNovoApple.png';
+import googleButton from '../assets/LogoNovoGoogle.png';
+import facebookButton from '../assets/LogoNovoFace.png';
 import { useEffect, useCallback } from 'react';
 import { useSSO } from '@clerk/clerk-expo';
 import { Pressable, Image } from 'react-native';

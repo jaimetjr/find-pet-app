@@ -1,11 +1,12 @@
-import { RegisterUserDTO } from "@/dtos/user/registerUser";
-import api from "./api";
+import { RegisterUserDTO } from "@/dtos/user/registerUserDto";
+import { authenticatedApi } from "./api";
 import { UserDTO } from "@/dtos/user/userDto";
 import { AxiosError } from "axios";
+import { Result } from "@/dtos/result";
 
-export const register = async (model: RegisterUserDTO): Promise<UserDTO> => {
+export const register = async (model: RegisterUserDTO): Promise<Result<UserDTO>> => {
   try {
-    const response = await api.post("/auth/register", model);
+    const response = await authenticatedApi.post("/auth/register", model);
     return response.data;
   } catch (error) {
     const err = error as any;
@@ -35,11 +36,13 @@ export const register = async (model: RegisterUserDTO): Promise<UserDTO> => {
  
 export const getMe = async (clerkId: string): Promise<UserDTO | null> => {
   try { 
-    const response = await api.get(`/auth/${clerkId}`);
-    console.log("response.data", response.data);
+    const response = await authenticatedApi.get(`/auth/me/${clerkId}`);
     return response.data;
   } catch (error) {
-    console.log("ei", error);
+    const err = error as AxiosError;
+    if (err.message === 'Network Error') {
+      
+    }
     return null;
   }
 };

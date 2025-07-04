@@ -54,7 +54,12 @@ export default function CustomInput<T extends FieldValues>({
             <TextInput
               {...props}
               value={value}
-              onChangeText={onChange}
+              onChangeText={(text) => {
+                onChange(text);
+                if (props.onChangeText) {
+                  props.onChangeText(text);
+                }
+              }}
               onBlur={onBlur}
               placeholderTextColor={`${theme.colors.text}80`}
               style={[

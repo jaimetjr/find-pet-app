@@ -9,6 +9,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import CustomInput from "@/components/CustomInput";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -22,6 +23,10 @@ import { Controller, useForm } from "react-hook-form";
 import RNPickerSelect from "react-native-picker-select";
 import { brazilStates } from "@/helpers/states";
 import CustomDropdown from "@/components/CustomDropdown";
+import { RegisterUserDTO } from "@/dtos/user/registerUserDto";
+import { useAuth, useUser } from "@clerk/clerk-expo";
+import { useRouter } from "expo-router";
+import { ProviderEnum } from "@/enums/provider-enum";
 
 const profileSetupSchema = z.object({
   phone: z
@@ -36,6 +41,8 @@ const profileSetupSchema = z.object({
   neighborhood: z.string({ message: "Bairro é obrigatório" }),
   city: z.string({ message: "Cidade é obrigatória" }),
   state: z.string({ message: "Estado é obrigatório" }),
+  number: z.string({ message: "Número é obrigatório" }),
+  complement: z.string().optional(),
 });
 
 type ProfileSetupFields = z.infer<typeof profileSetupSchema>;
@@ -43,10 +50,11 @@ type ProfileSetupFields = z.infer<typeof profileSetupSchema>;
 export default function ProfileSetup() {
   const theme = useTheme();
   const [isLoading, setIsLoading] = useState(false);
-  const { userDb, updateUser } = useUserAuth();
+  const { userDb, updateUser, registerUser } = useUserAuth();
+  const { isLoaded, userId } = useAuth();
   const [avatar, setAvatar] = useState<string | null>(null);
-  const [location, setLocation] = useState<string | null>(null);
-
+  const { user } = useUser();
+  const router = useRouter();
   const {
     control,
     handleSubmit,
@@ -55,33 +63,68 @@ export default function ProfileSetup() {
     formState: { errors },
   } = useForm<ProfileSetupFields>({
     resolver: zodResolver(profileSetupSchema),
+    defaultValues: {
+      location: "0,0", // Default location to satisfy validation
+    },
   });
 
-  /*useEffect(() => {
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          console.warn("Permission to access location was denied");
-          return;
-        }
+  const onSubmit = async (data: ProfileSetupFields) => {
+    if (!isLoaded) return;
+    if (!userId) return;
+    if (!user) return;
+    setIsLoading(true);
 
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
+    const notifications = await new Promise<boolean>((resolve) => {
+      Alert.alert(
+        "Notificações",
+        "Gostaria de receber notificações?",
+        [
+          {
+            text: "Não",
+            onPress: () => resolve(false),
+            style: "cancel",
+          },
+          {
+            text: "Sim",
+            onPress: () => resolve(true),
+          },
+        ],
+        { cancelable: false }
+      );
+    });
 
-        const coords = `${loc.coords.latitude.toFixed(
-          5
-        )}, ${loc.coords.longitude.toFixed(5)}`;
-        console.log("User location:", coords);
-        setLocation(coords);
-        setValue("location", coords);
-      } catch (error) {
-        console.error("Error getting location:", error);
-        setLocation(null);
+    try {
+      const registerDto = new RegisterUserDTO(
+        userId,
+        user.firstName || "" + " " + user.lastName || "",
+        user.emailAddresses[0].emailAddress || "",
+        data.phone,
+        data.bio,
+        data.cep,
+        data.address,
+        data.neighborhood,
+        data.city,
+        data.state,
+        data.number,
+        ProviderEnum.Email,
+        data.complement,
+        avatar || "",
+        notifications
+      );
+      const result = await registerUser(registerDto);
+      if (result.success) {
+        Alert.alert("Sucesso", "Perfil criado com sucesso, você sera direcionado ao aplicatio!");
+        router.push("/(main)/home");
+      } else {
+        setError("root", { message: result.errors.join("\n") });
       }
-    })();
-  }, []);*/
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setError("root", { message: error as string || "Erro ao criar perfil" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -114,12 +157,11 @@ export default function ProfileSetup() {
   };
 
   const handleCepChange = async (cep: string) => {
-    console.log(cep);
     if (cep.length !== 8) return;
     try {
+      setIsLoading(true);
       const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
       const data = await response.json();
-      console.log(data);
       if (!data.erro) {
         setValue("address", data.logradouro || "");
         setValue("neighborhood", data.bairro || "");
@@ -128,6 +170,8 @@ export default function ProfileSetup() {
       }
     } catch (error) {
       console.warn("Erro ao buscar dados do CEP", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -169,15 +213,8 @@ export default function ProfileSetup() {
             <CustomInput
               control={control}
               name="phone"
-              label="Telefone"
+              label="Celular"
               keyboardType="phone-pad"
-            />
-            <CustomInput
-              control={control}
-              name="bio"
-              label="Bio"
-              multiline
-              numberOfLines={4}
             />
 
             <CustomInput
@@ -187,10 +224,33 @@ export default function ProfileSetup() {
               keyboardType="numeric"
               onChangeText={handleCepChange}
             />
-            <CustomInput control={control} name="address" label="Endereço" />
-            <CustomInput control={control} name="neighborhood" label="Bairro" />
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <CustomInput
+                  control={control}
+                  name="address"
+                  label="Endereço"
+                  editable={!isLoading}
+                />
+              </View>
+              <View style={{ flex: 0.5 }}>
+                <CustomInput
+                  control={control}
+                  name="number"
+                  label="Número"
+                  editable={!isLoading}
+                />
+              </View>
+            </View>
+            <CustomInput
+              control={control}
+              name="neighborhood"
+              label="Bairro"
+              editable={!isLoading}
+            />
 
             <CustomDropdown
+              disabled={isLoading}
               name="state"
               control={control}
               label="Estado"
@@ -200,7 +260,28 @@ export default function ProfileSetup() {
               }))}
             />
 
-            <CustomInput control={control} name="city" label="Cidade" />
+            <CustomInput
+              control={control}
+              name="city"
+              label="Cidade"
+              editable={!isLoading}
+            />
+
+            <CustomInput
+              control={control}
+              name="complement"
+              label="Complemento"
+              editable={!isLoading}
+            />
+
+            <CustomInput
+              control={control}
+              name="bio"
+              label="Bio"
+              multiline
+              style={{ height: 100, textAlignVertical: "top" }}
+              numberOfLines={4}
+            />
           </View>
 
           <TouchableOpacity
@@ -208,7 +289,7 @@ export default function ProfileSetup() {
               styles.loginButton,
               { backgroundColor: theme.colors.primary },
             ]}
-            onPress={() => {}}
+            onPress={handleSubmit(onSubmit)}
             disabled={isLoading}
           >
             {isLoading ? (
@@ -297,5 +378,27 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
+  },
+  loadingCard: {
+    position: "absolute",
+    top: "45%",
+    left: "50%",
+    transform: [{ translateX: -75 }, { translateY: -40 }],
+    width: 150,
+    padding: 16,
+
+    borderRadius: 12,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 999,
+  },
+  loadingText: {
+    marginTop: 8,
+    color: "#333",
+    fontSize: 14,
   },
 });

@@ -7,6 +7,8 @@ import {
 } from "react";
 import { getMe, register } from "@/services/authService";
 import { UserDTO } from "@/dtos/user/userDto";
+import { RegisterUserDTO } from "@/dtos/user/registerUserDto";
+import { Result } from "@/dtos/result";
 
 export interface User {
   id?: string;
@@ -26,6 +28,7 @@ interface UserAuthContextType {
   userDb: User | null;
   updateUser: (user: User) => void;
   getUser: (clerkId: string) => Promise<UserDTO | null>;
+  registerUser: (user: RegisterUserDTO) => Promise<Result<UserDTO>>;
 }
 
 const UserAuthContext = createContext<UserAuthContextType | undefined>(
@@ -48,8 +51,13 @@ export const UserAuthProvider = ({ children }: UserAuthProviderProps) => {
     return user;
   };
 
+  const registerUser = async (user: RegisterUserDTO) : Promise<Result<UserDTO>> => {
+    const result = await register(user);
+    return result;
+  };
+
   useEffect(() => {}, []);
-  const value = { userDb, updateUser, getUser };
+  const value = { userDb, updateUser, getUser, registerUser };
 
   return (
     <UserAuthContext.Provider value={value}>

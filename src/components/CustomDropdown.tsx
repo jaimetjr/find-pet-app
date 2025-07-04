@@ -6,20 +6,21 @@ import {
   View,
   FlatList,
   StyleSheet,
+  TouchableOpacityProps,
 } from "react-native";
-import { Controller, Control } from "react-hook-form";
+import { Controller, Control, FieldValues, Path } from "react-hook-form";
 import { useTheme } from "@/contexts/ThemeContext";
 
 type Option = { label: string; value: string };
 
-type Props = {
-  name: string;
-  control: Control<any>;
+type CustomDropdownProps<T extends FieldValues> = {
+  control: Control<T>;
+  name: Path<T>;
   label: string;
   options: Option[];
-};
+} & TouchableOpacityProps;
 
-export default function CustomDropdown({ name, control, label, options }: Props) {
+export default function CustomDropdown<T extends FieldValues>({ name, control, label, options, ...props }: CustomDropdownProps<T>) {
   const theme = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -37,6 +38,7 @@ export default function CustomDropdown({ name, control, label, options }: Props)
               {label}
             </Text>
             <TouchableOpacity
+              {...props}
               style={[
                 styles.pickerContainer,
                 {

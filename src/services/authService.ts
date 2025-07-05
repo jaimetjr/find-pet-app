@@ -1,48 +1,27 @@
 import { RegisterUserDTO } from "@/dtos/user/registerUserDto";
-import { authenticatedApi } from "./api";
 import { UserDTO } from "@/dtos/user/userDto";
-import { AxiosError } from "axios";
 import { Result } from "@/dtos/result";
+import { BaseService } from "./baseService";
+import { API_ENDPOINTS } from "@/constants";
 
 export const register = async (model: RegisterUserDTO): Promise<Result<UserDTO>> => {
-  try {
-    const response = await authenticatedApi.post("/auth/register", model);
-    return response.data;
-  } catch (error) {
-    const err = error as any;
-    const raw = err?.response?.data;
-    let messages: string[] = [];
-
-    if (raw?.errors && typeof raw.errors === 'object') {
-      // Extract all validation error messages
-      for (const field in raw.errors) {
-        if (Array.isArray(raw.errors[field])) {
-          messages.push(...raw.errors[field]);
-        }
-      }
-    } else if (raw?.message) {
-      messages.push(raw.message);
-    } else if (raw?.title) {
-      messages.push(raw.title);
-    } else if (typeof raw === 'string') {
-      messages.push(raw);
-    } else {
-      messages.push('Unknown error');
-    }
-
-    throw messages; 
-  }
+  return BaseService.post<UserDTO>(API_ENDPOINTS.AUTH_REGISTER, model);
 };
  
 export const getMe = async (clerkId: string): Promise<UserDTO | null> => {
   try { 
-    const response = await authenticatedApi.get(`/auth/me/${clerkId}`);
-    return response.data;
-  } catch (error) {
-    const err = error as AxiosError;
-    if (err.message === 'Network Error') {
-      
+    const response = await BaseService.get<any>(`${API_ENDPOINTS.AUTH_ME}/${clerkId}`);
+    
+    // Check if response is wrapped in Result format
+    if (response && typeof response === 'object' && 'success' in response) {
+      // Response is in Result format
+      return response.success ? response.value : null;
+    } else {
+      // Response is direct user data
+      return response as UserDTO;
     }
+  } catch (error) {
+    console.error('Error fetching user:', error);
     return null;
   }
 };

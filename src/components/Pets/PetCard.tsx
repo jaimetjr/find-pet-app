@@ -4,7 +4,7 @@ import { Text, TouchableOpacity, View, StyleSheet } from "react-native"
 import { useTheme } from "@/contexts/ThemeContext"
 import { useRouter } from "expo-router"
 import { Pet } from "@/data/pets"
-import { calculateDistance, Coordinates } from "@/types/location"
+import { calculateDistance, Coordinates } from "@/utils/locationUtils"
 import ImageCarousel from "../ImageCarousel"
 
 

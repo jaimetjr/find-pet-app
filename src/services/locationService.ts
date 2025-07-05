@@ -1,5 +1,7 @@
 import * as Location from 'expo-location';
 import type { Coordinates, LocationWithAddress } from '../types/location';
+import { ERROR_MESSAGES } from '@/constants';
+import { ErrorHandler } from '@/utils/errorHandler';
 
 export class LocationService {
     static async requestPermissions() : Promise<boolean> {
@@ -22,7 +24,7 @@ export class LocationService {
                 longitude: location.coords.longitude
             };
         } catch (error) {
-            console.error("Error getting location: ", error);
+            ErrorHandler.logError(error, 'LocationService.getCurrentLocation');
             return null;
         }
     }
@@ -44,10 +46,10 @@ export class LocationService {
                     return region;
                 }
             }
-            return "Localização desconhecida"
+            return ERROR_MESSAGES.LOCATION_UNKNOWN;
         } catch (error) {
-             console.error("Error getting address:", error)
-             return "Localização desconhecida"
+             ErrorHandler.logError(error, 'LocationService.getAddressFromCoordinates');
+             return ERROR_MESSAGES.LOCATION_UNKNOWN;
         }
     }
 

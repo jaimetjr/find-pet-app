@@ -217,7 +217,6 @@ export default function AddPetScreen() {
       try {
         setIsLoadingPet(true);
         const result = await getPet(petId);
-        console.log('result', result.value);
         
         if (result.success && result.value) {
           const pet = result.value;
@@ -356,7 +355,7 @@ export default function AddPetScreen() {
         result = await addPet(petDTO);
       }
 
-      console.log(result);
+      //console.log(result);
 
       if (result.success) {
         const action = isEditMode ? "atualizado" : "registrado";

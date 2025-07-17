@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -10,28 +10,43 @@ interface SearchFilterHeaderProps {
   onMapPress: () => void;
 }
 
-export default function SearchFilterHeader({
+const SearchFilterHeader = React.memo(({
   searchQuery,
   onSearchChange,
   onFilterPress,
   onMapPress,
-}: SearchFilterHeaderProps) {
+}: SearchFilterHeaderProps) => {
   const theme = useTheme();
+
+  // Memoize styles to prevent unnecessary re-renders
+  const searchContainerStyles = useMemo(() => [
+    styles.searchContainer,
+    {
+      backgroundColor: theme.colors.card,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.md,
+    },
+  ], [theme.colors.card, theme.colors.border, theme.borderRadius.md]);
+
+  const iconButtonStyles = useMemo(() => [
+    styles.iconButton,
+    {
+      backgroundColor: theme.colors.card,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.md,
+    },
+  ], [theme.colors.card, theme.colors.border, theme.borderRadius.md]);
+
+  const searchInputStyles = useMemo(() => [
+    styles.searchInput, 
+    { color: theme.colors.text }
+  ], [theme.colors.text]);
 
   return (
     <View style={styles.searchFilterContainer}>
-      <View
-        style={[
-          styles.searchContainer,
-          {
-            backgroundColor: theme.colors.card,
-            borderColor: theme.colors.border,
-            borderRadius: theme.borderRadius.md,
-          },
-        ]}
-      >
+      <View style={searchContainerStyles}>
         <TextInput
-          style={[styles.searchInput, { color: theme.colors.text }]}
+          style={searchInputStyles}
           placeholder="Buscar pets..."
           placeholderTextColor={`${theme.colors.text}80`}
           value={searchQuery}
@@ -40,35 +55,25 @@ export default function SearchFilterHeader({
       </View>
 
       <TouchableOpacity
-        style={[
-          styles.iconButton,
-          {
-            backgroundColor: theme.colors.card,
-            borderColor: theme.colors.border,
-            borderRadius: theme.borderRadius.md,
-          },
-        ]}
+        style={iconButtonStyles}
         onPress={onFilterPress}
       >
         <Feather name="sliders" size={20} color={theme.colors.text} />
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[
-          styles.iconButton,
-          {
-            backgroundColor: theme.colors.card,
-            borderColor: theme.colors.border,
-            borderRadius: theme.borderRadius.md,
-          },
-        ]}
+        style={iconButtonStyles}
         onPress={onMapPress}
       >
         <Feather name="map" size={20} color={theme.colors.text} />
       </TouchableOpacity>
     </View>
   );
-}
+});
+
+SearchFilterHeader.displayName = 'SearchFilterHeader';
+
+export default SearchFilterHeader;
 
 const styles = StyleSheet.create({
   searchFilterContainer: {

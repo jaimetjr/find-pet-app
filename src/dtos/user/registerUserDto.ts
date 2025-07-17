@@ -1,12 +1,14 @@
 import { ProviderEnum } from "@/enums/provider-enum";
+import { ContactType } from "@/enums/contactType";
 
 export class RegisterUserDTO {
     clerkId : string;
     name : string;
     email : string;
+    birthDate : string; // ISO date string
+    cpf : string;
     phone : string;
     notifications? : boolean;
-    avatar? : string;
     bio : string;
     cep: string;
     address: string;
@@ -16,12 +18,32 @@ export class RegisterUserDTO {
     city: string;
     state: string;
     provider: ProviderEnum;
+    contactType: ContactType;
 
-    constructor(clerkId : string, name : string, email : string, phone : string, bio : string, cep : string, address : string,
-        neighborhood : string, city : string, state : string, number : string, provider: ProviderEnum, complement? : string, avatar? : string, notifications? : boolean) {
+    constructor(
+        clerkId : string, 
+        name : string, 
+        email : string, 
+        birthDate : string,
+        cpf : string,
+        phone : string, 
+        bio : string, 
+        cep : string, 
+        address : string,
+        neighborhood : string, 
+        city : string, 
+        state : string, 
+        number : string, 
+        provider: ProviderEnum, 
+        contactType: ContactType,
+        complement? : string, 
+        notifications? : boolean
+    ) {
         this.clerkId = clerkId;
         this.name = name;
         this.email = email;
+        this.birthDate = birthDate;
+        this.cpf = cpf;
         this.phone = phone;
         this.bio = bio;
         this.cep = cep;
@@ -31,8 +53,8 @@ export class RegisterUserDTO {
         this.state = state;
         this.number = number;
         this.complement = complement;
-        this.avatar = avatar;
         this.provider = provider;
         this.notifications = notifications;
+        this.contactType = contactType;
     }
 }

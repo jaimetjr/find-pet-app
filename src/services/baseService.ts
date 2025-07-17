@@ -51,8 +51,44 @@ export abstract class BaseService {
         },
       });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      console.error('[BaseService.postFormData] Error:', error.message);
+      if (error.response) {
+        console.error('[BaseService.postFormData] Response:', {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers,
+        });
+      } else if (error.request) {
+        console.error('[BaseService.postFormData] Request:', error.request);
+      }
+      console.error('[BaseService.postFormData] Config:', error.config);
       ErrorHandler.logError(error, `POST FormData ${endpoint}`);
+      throw ErrorHandler.extractErrorMessages(error);
+    }
+  }
+
+  public static async putFormData<T>(endpoint: string, formData: FormData): Promise<Result<T>> {
+    try {
+      const response = await authenticatedApi.put(endpoint, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('[BaseService.putFormData] Error:', error.message);
+      if (error.response) {
+        console.error('[BaseService.putFormData] Response:', {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers,
+        });
+      } else if (error.request) {
+        console.error('[BaseService.putFormData] Request:', error.request);
+      }
+      console.error('[BaseService.putFormData] Config:', error.config);
+      ErrorHandler.logError(error, `PUT FormData ${endpoint}`);
       throw ErrorHandler.extractErrorMessages(error);
     }
   }

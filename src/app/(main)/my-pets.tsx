@@ -12,7 +12,7 @@ import {
 import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { deletePet, getPets } from "@/services/petService";
+import { deletePet, getPetsById } from "@/services/petService";
 import { PetDTO } from '@/dtos/pet/petDto';
 
 export default function MyPetsScreen() {
@@ -24,7 +24,8 @@ export default function MyPetsScreen() {
   const fetchPets = useCallback(async () => {
     try {
       setIsLoading(true);
-      const pets = await getPets();
+      const pets = await getPetsById();
+      console.log(pets);
       setPets(pets.value);
     } catch (error) {
       console.error('Error fetching pets:', error);

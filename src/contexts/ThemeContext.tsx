@@ -8,6 +8,7 @@ type ThemeColors = {
   secondary: string
   accent: string
   text: string
+  textSecondary: string
   background: string
   card: string
   border: string
@@ -41,6 +42,7 @@ const theme: Theme = {
     secondary: "#E8D0B3", // Light cream
     accent: "#D4A76A", // Darker gold
     text: "#7D4E24", // Dark brown
+    textSecondary: "#A67C52", // Medium brown for secondary text
     background: "#FFF9F0", // Off-white
     card: "#FFFFFF", // White
     border: "#E8D0B3", // Light cream

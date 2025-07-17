@@ -1,4 +1,5 @@
 // app/(main)/home.tsx
+import React, { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -7,7 +8,7 @@ import {
   Alert,
 } from "react-native";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import ActiveFilters from "@/components/Pets/ActiveFilters";
 import PetCard from "@/components/Pets/PetCard";
@@ -22,17 +23,33 @@ import { useLocation } from "@/hooks/useLocation";
 import { useUser } from "@/hooks/useUser";
 import { usePetFilters } from "@/hooks/usePetFilters";
 import { useMapToggle } from "@/hooks/useMapToggle";
-import React from "react";
+import { usePerformance } from "@/hooks/usePerformance";
+import { useRetry } from "@/hooks/useRetry";
+import { useAuth } from "@clerk/clerk-expo";
 
 export default function HomeScreen() {
   const theme = useTheme();
   const [filterModalVisible, setFilterModalVisible] = useState<boolean>(false);
 
+  // Performance monitoring
+  const performance = usePerformance('HomeScreen', {
+    trackRenders: true,
+    trackApiCalls: true,
+    logToConsole: true,
+  });
+  
+  // Retry logic for failed API calls
+  const retry = useRetry({ maxAttempts: 3, delay: 1000 });
+
   // Custom hooks for data management
   const { pets, isLoading: isLoadingPets, refetch: refetchPets } = usePets();
   const { userLocation, hasLocationPermission } = useLocation();
   const { isLoading: isLoadingUser, hasCheckedUser, user } = useUser();
-  
+  const { userId } = useAuth();
+  useEffect(() => {
+    console.log('user', userId);
+  }, [userId]);
+
   // Custom hooks for business logic
   const {
     searchQuery,

@@ -1,9 +1,12 @@
 // API Endpoints
 export const API_ENDPOINTS = {
   PETS: '/pet',
+  PETS_BY_ID: '/pet/GetAllPetsByUser',
   PET_IMAGES: '/pet/images',
   AUTH_REGISTER: '/auth/register',
   AUTH_ME: '/auth/me',
+  AUTH_UPDATE: '/auth/update',
+  CHAT_ROOMS: '/chat',
 } as const;
 
 // Environment Variables
@@ -20,6 +23,10 @@ export const DEFAULTS = {
     CONTACT_PHONE: 'Não informado',
     IMAGE_TYPE: 'image/jpeg',
     IMAGE_NAME_PREFIX: 'pet_image_',
+  },
+  USER:{
+    IMAGE_TYPE: 'image/jpeg',
+    IMAGE_NAME_PREFIX: 'user_image_',
   },
   LOCATION: {
     COUNTRY: 'Brasil',

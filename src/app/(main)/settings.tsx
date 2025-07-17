@@ -13,10 +13,12 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { useRouter } from 'expo-router';
 
 export default function SettingsScreen() {
   const theme = useTheme();
   const { signOut } = useAuth();
+  const router = useRouter();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
@@ -69,25 +71,9 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.colors.text }]}>Settings</Text>
-        </View>
-
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Preferences</Text>
           
-          {renderSettingItem(
-            'notifications',
-            'Notifications',
-            'Receive alerts about new pets',
-            <Switch
-              value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
-              trackColor={{ false: '#767577', true: theme.colors.primary }}
-              thumbColor={notificationsEnabled ? '#f4f3f4' : '#f4f3f4'}
-            />
-          )}
-
           {renderSettingItem(
             'location',
             'Location Services',
@@ -118,9 +104,10 @@ export default function SettingsScreen() {
           
           {renderSettingItem(
             'person',
-            'Edit Profile',
-            'Update your personal information',
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.text} />
+            'Editar perfil',
+            'Atualize suas informações pessoais',
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.text} />,
+            () => router.push('/(main)/edit-profile')
           )}
 
           {renderSettingItem(

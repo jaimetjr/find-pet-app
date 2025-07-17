@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -46,25 +47,25 @@ export default function WelcomeScreen() {
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      <View style={styles.content}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('@/assets/SimbaNala.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-        <View style={styles.textContainer}>
-          <Text style={[styles.title, { color: theme.colors.text }]}>
-            Bem-vindo ao Achando Lar
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.colors.text }]}>
-            Conectando pets especiais a lares amorosos
-          </Text>
-        </View>
-        <View style={styles.signInContainer}>
-          <SignIn />
-        </View>
+      <View style={{ flex: 1, justifyContent: 'center' }}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <View style={[styles.content, { marginTop: 32 }]}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('@/assets/SimbaNala.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={[styles.title, { color: theme.colors.text }]}>Bem-vindo ao Achando Lar</Text>
+              <Text style={[styles.subtitle, { color: theme.colors.text }]}>Conectando pets especiais a lares amorosos</Text>
+            </View>
+            <View style={styles.signInContainer}>
+              <SignIn />
+            </View>
+          </View>
+        </ScrollView>
       </View>
     </SafeAreaView>
   );
@@ -74,19 +75,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
   content: {
-    flex: 1,
-    padding: 20,
-    justifyContent: "flex-start",
     alignItems: "center",
-    marginTop: 40,
+    width: "100%",
   },
   logoContainer: {
     width: 160,
     height: 160,
     borderRadius: 80,
     overflow: "hidden",
-    marginBottom: 20,
+    marginBottom: 12,
   },
   logo: {
     width: "100%",
@@ -94,7 +98,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 12,
   },
   title: {
     fontSize: 20,
@@ -109,6 +113,6 @@ const styles = StyleSheet.create({
   },
   signInContainer: {
     width: "100%",
-    marginBottom: 30,
+    marginBottom: 16,
   },
 });

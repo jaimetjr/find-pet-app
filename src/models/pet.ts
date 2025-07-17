@@ -2,7 +2,7 @@
 import type { Coordinates } from "../types/location"
 
 export type Pet = {
-  id: number
+  id: string
   name: string
   type: string
   breed: string

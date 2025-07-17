@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons, Feather } from "@expo/vector-icons"
-import React from "react"
+import React, { useMemo } from "react"
 import { Text, TouchableOpacity, View, StyleSheet } from "react-native"
 import { useTheme } from "@/contexts/ThemeContext"
 import { useRouter } from "expo-router"
@@ -7,21 +7,19 @@ import { Pet } from "@/data/pets"
 import { calculateDistance, Coordinates } from "@/utils/locationUtils"
 import ImageCarousel from "../ImageCarousel"
 
-
 export type PetCardProps = {
     pet: Pet
     userLocation: Coordinates
 }
 
-export default function PetCard({ pet, userLocation }: PetCardProps) {
-  console.log(userLocation);
-    //const petIsFavorite = isFavorite(item.id)
+const PetCard = React.memo(({ pet, userLocation }: PetCardProps) => {
     const petIsFavorite = false;
     const theme = useTheme()
     const router = useRouter();
 
-    const calculatePetDistance = (pet: Pet): string => {
-        if (!userLocation) return ""
+    // Memoize distance calculation
+    const petDistance = useMemo(() => {
+        if (!userLocation) return "";
     
         const distance = calculateDistance(
           userLocation.latitude,
@@ -30,21 +28,45 @@ export default function PetCard({ pet, userLocation }: PetCardProps) {
           pet.coordinates.longitude,
         )
     
-        return distance.toFixed(1)
-      }
+        return distance.toFixed(1);
+    }, [userLocation, pet.coordinates.latitude, pet.coordinates.longitude]);
 
-    return (
-      <TouchableOpacity
-        style={[
-          styles.card,
-          {
+    // Memoize card styles
+    const cardStyles = useMemo(() => [
+        styles.card,
+        {
             backgroundColor: theme.colors.card,
             borderColor: theme.colors.border,
             borderRadius: theme.borderRadius.md,
-          },
-        ]}
-        //onPress={() => router.push(`/pet/${item.id}`)}
-        onPress={() => {}}
+        },
+    ], [theme.colors.card, theme.colors.border, theme.borderRadius.md]);
+
+    // Memoize favorite button styles
+    const favoriteButtonStyles = useMemo(() => [
+        styles.favoriteButton,
+        {
+            backgroundColor: petIsFavorite ? theme.colors.primary : "rgba(255, 255, 255, 0.8)",
+        },
+    ], [petIsFavorite, theme.colors.primary]);
+
+    // Memoize image count badge styles
+    const imageCountBadgeStyles = useMemo(() => [
+        styles.imageCountBadge, 
+        { backgroundColor: theme.colors.primary }
+    ], [theme.colors.primary]);
+
+    // Memoize location container styles
+    const locationContainerStyles = useMemo(() => [
+        styles.locationContainer, 
+        { backgroundColor: theme.colors.secondary }
+    ], [theme.colors.secondary]);
+
+    return (
+      <TouchableOpacity
+        style={cardStyles}
+        onPress={() => {
+          router.push(`/pet-detail?petId=${pet.id}`);
+        }}
       >
         <View style={styles.imageContainer}>
           <ImageCarousel
@@ -55,12 +77,7 @@ export default function PetCard({ pet, userLocation }: PetCardProps) {
             onImagePress={() => {}}
           />
           <TouchableOpacity
-            style={[
-              styles.favoriteButton,
-              {
-                backgroundColor: petIsFavorite ? theme.colors.primary : "rgba(255, 255, 255, 0.8)",
-              },
-            ]}
+            style={favoriteButtonStyles}
             onPress={() => {
               /*if (petIsFavorite) {
                 removeFavorite(item.id)
@@ -75,7 +92,7 @@ export default function PetCard({ pet, userLocation }: PetCardProps) {
               color={petIsFavorite ? theme.colors.text : theme.colors.primary}
             />
           </TouchableOpacity>
-          <View style={[styles.imageCountBadge, { backgroundColor: theme.colors.primary }]}>
+          <View style={imageCountBadgeStyles}>
             <Text style={[styles.imageCountText, { color: theme.colors.text }]}>{pet.images.length} fotos</Text>
           </View>
         </View>
@@ -84,7 +101,7 @@ export default function PetCard({ pet, userLocation }: PetCardProps) {
           <Text style={[styles.petBreed, { color: theme.colors.text }]}>{pet.breed}</Text>
           <View style={styles.petInfo}>
             <Text style={[styles.petAge, { color: theme.colors.text }]}>{pet.age} anos</Text>
-            <View style={[styles.locationContainer, { backgroundColor: theme.colors.secondary }]}>
+            <View style={locationContainerStyles}>
               <Text style={[styles.petLocation, { color: theme.colors.text }]}>{pet.location}</Text>
             </View>
           </View>
@@ -92,13 +109,17 @@ export default function PetCard({ pet, userLocation }: PetCardProps) {
           {userLocation && (
             <View style={styles.distanceContainer}>
               <Feather name="map-pin" size={14} color={theme.colors.text} style={styles.distanceIcon} />
-              <Text style={[styles.distanceText, { color: theme.colors.text }]}>{calculatePetDistance(pet)} km</Text>
+              <Text style={[styles.distanceText, { color: theme.colors.text }]}>{petDistance} km</Text>
             </View>
           )}
         </View>
       </TouchableOpacity>
     )
-}
+});
+
+PetCard.displayName = 'PetCard';
+
+export default PetCard;
 
 const styles = StyleSheet.create({
     container: {

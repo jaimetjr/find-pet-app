@@ -1,4 +1,5 @@
 import { PetSize } from '@/enums/petSize-enum';
+import { PetGender } from '@/enums/petGender-enum';
 
 export interface PetType {
     id: string; // Guid
@@ -23,6 +24,7 @@ export class AddPetDTO {
     breed: PetBreed;
     size: PetSize;
     age: number;
+    gender: PetGender;
     bio: string;
     history: string;
     cep: string;
@@ -41,6 +43,7 @@ export class AddPetDTO {
         breed: PetBreed,
         size: PetSize,
         age: number,
+        gender: PetGender,
         bio: string,
         history: string,
         cep: string,
@@ -58,6 +61,7 @@ export class AddPetDTO {
         this.breed = breed;
         this.size = size;
         this.age = age;
+        this.gender = gender;
         this.bio = bio;
         this.history = history;
         this.cep = cep;

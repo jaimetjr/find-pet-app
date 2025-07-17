@@ -5,9 +5,12 @@ import { BaseService } from "./baseService";
 import { API_ENDPOINTS, DEFAULTS } from "@/constants";
 
 export const addPet = async (model: AddPetDTO): Promise<Result<PetDTO>> => {
-  console.log(model);
   return BaseService.post<PetDTO>(API_ENDPOINTS.PETS, model);
 }; 
+
+export const getPetsById = async (): Promise<Result<PetDTO[]>> => {
+  return BaseService.get<PetDTO[]>(API_ENDPOINTS.PETS_BY_ID);
+}
 
 export const getPets = async (): Promise<Result<PetDTO[]>> => {
   return BaseService.get<PetDTO[]>(API_ENDPOINTS.PETS);

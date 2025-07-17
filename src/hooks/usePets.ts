@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getPets } from '@/services/petService';
 import { PetDTO } from '@/dtos/pet/petDto';
-import { Pet } from '@/models/pet';
 import { Alert } from 'react-native';
 import { getCoordinatesFromAddress } from '@/utils/locationUtils';
 import { DEFAULTS, ERROR_MESSAGES } from '@/constants';
+import { Pet } from '@/models/pet';
 
 export const usePets = () => {
   const [pets, setPets] = useState<Pet[]>([]);
@@ -21,7 +21,7 @@ export const usePets = () => {
     );
 
     return {
-      id: parseInt(petDTO.id),
+      id: petDTO.id,
       name: petDTO.name,
       type: petDTO.type.name,
       breed: petDTO.breed.name,
@@ -47,7 +47,6 @@ export const usePets = () => {
       setError(null);
       
       const result = await getPets();
-      
       if (result.success && result.value) {
         const petsPromises = result.value.map(convertPetDTOToPet);
         const pets = await Promise.all(petsPromises);

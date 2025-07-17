@@ -1,6 +1,8 @@
 import { PetBreedDTO } from "./petBreedDto";
 import { PetTypeDTO } from "./petTypeDto";
 import { PetSize } from "@/enums/petSize-enum";
+import { PetGender } from "@/enums/petGender-enum";
+import { UserDTO } from "../user/userDto";
 
 export interface PetDTO {
     id: string;
@@ -9,6 +11,7 @@ export interface PetDTO {
     type: PetTypeDTO;
     size: PetSize;
     age: number;
+    gender: PetGender;
     bio: string;
     history: string;
     cep: string;
@@ -19,6 +22,7 @@ export interface PetDTO {
     number: string;
     complement?: string;
     petImages? : PetImagesDTO[];
+    user : UserDTO;
 }
 
 export interface PetImagesDTO {   

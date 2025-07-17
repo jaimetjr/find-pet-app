@@ -12,6 +12,7 @@ import {
   Alert,
 } from "react-native";
 import CustomInput from "@/components/CustomInput";
+import CustomDatePicker from "@/components/CustomDatePicker";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useEffect, useState } from "react";
 import { useUserAuth } from "@/contexts/UserAuthContext";
@@ -27,8 +28,22 @@ import { RegisterUserDTO } from "@/dtos/user/registerUserDto";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
 import { ProviderEnum } from "@/enums/provider-enum";
+import { formatDateForBackend } from "@/utils/dateUtils";
+import { ContactType } from "@/enums/contactType";
 
 const profileSetupSchema = z.object({
+  birthDate: z
+    .string({ message: "Data de nascimento é obrigatória" })
+    .min(1, "Data de nascimento é obrigatória")
+    .refine((date) => {
+      if (!date) return false;
+      // Accept both ISO format (YYYY-MM-DD) and Brazilian format (DD/MM/YYYY)
+      return date.includes('-') || date.includes('/');
+    }, "Data deve estar no formato DD/MM/AAAA"),
+  cpf: z
+    .string({ message: "CPF é obrigatório" })
+    .min(11, "CPF deve ter 11 dígitos")
+    .max(14, "CPF deve ter no máximo 14 caracteres"),
   phone: z
     .string({ message: "Telefone é obrigatório" })
     .min(11, "Telefone deve ter pelo menos 11 dígitos"),
@@ -43,6 +58,7 @@ const profileSetupSchema = z.object({
   state: z.string({ message: "Estado é obrigatório" }),
   number: z.string({ message: "Número é obrigatório" }),
   complement: z.string().optional(),
+  contactType: z.string({ message: "Tipo de contato é obrigatório" }),
 });
 
 type ProfileSetupFields = z.infer<typeof profileSetupSchema>;
@@ -65,6 +81,7 @@ export default function ProfileSetup() {
     resolver: zodResolver(profileSetupSchema),
     defaultValues: {
       location: "0,0", // Default location to satisfy validation
+      contactType: ContactType.App.toString(), // Default to App contact type
     },
   });
 
@@ -98,6 +115,8 @@ export default function ProfileSetup() {
         userId,
         user.firstName || "" + " " + user.lastName || "",
         user.emailAddresses[0].emailAddress || "",
+        formatDateForBackend(data.birthDate),
+        data.cpf,
         data.phone,
         data.bio,
         data.cep,
@@ -107,11 +126,11 @@ export default function ProfileSetup() {
         data.state,
         data.number,
         ProviderEnum.Email,
+        parseInt(data.contactType) as ContactType,
         data.complement,
-        avatar || "",
         notifications
       );
-      const result = await registerUser(registerDto);
+      const result = await registerUser(registerDto, avatar || undefined);
       if (result.success) {
         Alert.alert("Sucesso", "Perfil criado com sucesso, você sera direcionado ao aplicatio!");
         router.push("/(main)/home");
@@ -210,6 +229,22 @@ export default function ProfileSetup() {
             <TouchableOpacity onPress={takePhoto} style={styles.cameraButton}>
               <Text style={styles.cameraButtonText}>Tirar Foto</Text>
             </TouchableOpacity>
+            
+            <CustomDatePicker
+              control={control}
+              name="birthDate"
+              label="Data de Nascimento"
+              placeholder="DD/MM/AAAA"
+            />
+
+            <CustomInput
+              control={control}
+              name="cpf"
+              label="CPF"
+              placeholder="000.000.000-00"
+              keyboardType="numeric"
+            />
+
             <CustomInput
               control={control}
               name="phone"
@@ -281,6 +316,17 @@ export default function ProfileSetup() {
               multiline
               style={{ height: 100, textAlignVertical: "top" }}
               numberOfLines={4}
+            />
+
+            <CustomDropdown
+              name="contactType"
+              control={control}
+              label="Tipo de Contato"
+              options={[
+                { label: "Apenas pelo App", value: ContactType.App.toString() },
+                { label: "Apenas por Telefone", value: ContactType.Phone.toString() },
+                { label: "App e Telefone", value: ContactType.Both.toString() },
+              ]}
             />
           </View>
 

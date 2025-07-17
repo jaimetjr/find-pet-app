@@ -25,6 +25,7 @@ import { Controller, useForm } from "react-hook-form";
 import { addPet, getPet, updatePet } from "@/services/petService";
 import { AddPetDTO, PetType, PetBreed } from "@/dtos/pet/addPetDto";
 import { PetSize } from "@/enums/petSize-enum";
+import { PetGender } from "@/enums/petGender-enum";
 
 // Mock data for pet types and breeds with IDs
 const petTypes: PetType[] = [
@@ -141,6 +142,8 @@ const breedOptions: Record<string, PetBreed[]> = {
 
 const dogSizes = ["Pequeno", "Médio", "Grande", "Gigante"];
 
+const genderOptions = ["Macho", "Fêmea"];
+
 
 
 // Zod schema for validation
@@ -155,6 +158,7 @@ const addPetSchema = z.object({
     .number({ message: "Idade é obrigatória" })
     .min(0, "Idade deve ser maior ou igual a 0")
     .max(30, "Idade deve ser menor ou igual a 30"),
+  gender: z.nativeEnum(PetGender, { message: "Gênero é obrigatório" }),
   bio: z
     .string({ message: "Bio é obrigatória" })
     .min(10, "Bio deve ter pelo menos 10 caracteres"),
@@ -189,6 +193,7 @@ export default function AddPetScreen() {
   const [showBreedModal, setShowBreedModal] = useState(false);
   const [showSizeModal, setShowSizeModal] = useState(false);
   const [showStateModal, setShowStateModal] = useState(false);
+  const [showGenderModal, setShowGenderModal] = useState(false);
   const [selectedType, setSelectedType] = useState<PetType | null>(null);
   const [selectedBreed, setSelectedBreed] = useState<PetBreed | null>(null);
 
@@ -204,6 +209,7 @@ export default function AddPetScreen() {
     resolver: zodResolver(addPetSchema),
     defaultValues: {
       size: PetSize.Small, // Default size for non-dogs
+      gender: PetGender.Male, // Default gender
     },
   });
 
@@ -228,6 +234,7 @@ export default function AddPetScreen() {
             breed: pet.breed.id,
             size: pet.size,
             age: pet.age,
+            gender: pet.gender,
             bio: pet.bio,
             history: pet.history,
             cep: pet.cep,
@@ -291,6 +298,30 @@ export default function AddPetScreen() {
     }
   };
 
+  // Helper function to get gender display name
+  const getGenderDisplayName = (gender: PetGender): string => {
+    switch (gender) {
+      case PetGender.Male:
+        return "Macho";
+      case PetGender.Female:
+        return "Fêmea";
+      default:
+        return "Macho";
+    }
+  };
+
+  // Helper function to get gender from display name
+  const getGenderFromDisplayName = (displayName: string): PetGender => {
+    switch (displayName) {
+      case "Macho":
+        return PetGender.Male;
+      case "Fêmea":
+        return PetGender.Female;
+      default:
+        return PetGender.Male;
+    }
+  };
+
   const handleCepChange = async (cep: string) => {
     if (cep.length !== 8) return;
     try {
@@ -337,6 +368,7 @@ export default function AddPetScreen() {
         selectedBreed,
         data.size,
         data.age,
+        data.gender,
         data.bio,
         data.history,
         data.cep,
@@ -410,6 +442,7 @@ export default function AddPetScreen() {
       breed: "",
       size: PetSize.Small,
       age: undefined,
+      gender: PetGender.Male,
       bio: "",
       history: "",
       cep: "",
@@ -436,7 +469,7 @@ export default function AddPetScreen() {
     if (currentStep === 1) {
       fieldsToValidate = ["name", "type", "breed", "size"];
     } else if (currentStep === 2) {
-      fieldsToValidate = ["age", "bio", "history"];
+      fieldsToValidate = ["age", "gender", "bio", "history"];
     } else if (currentStep === 3) {
       fieldsToValidate = [
         "cep",
@@ -476,7 +509,7 @@ export default function AddPetScreen() {
       if (currentStep === 1) {
         fieldsToValidate = ["name", "type", "breed", "size"];
       } else if (currentStep === 2) {
-        fieldsToValidate = ["age", "bio", "history"];
+        fieldsToValidate = ["age", "gender", "bio", "history"];
       } else if (currentStep === 3) {
         fieldsToValidate = [
           "cep",
@@ -769,6 +802,28 @@ export default function AddPetScreen() {
           </View>
         )}
       />
+
+      <View style={styles.inputGroup}>
+        <Text style={[styles.label, { color: theme.colors.text }]}>
+          Gênero *
+        </Text>
+        <Controller
+          control={control}
+          name="gender"
+          render={({ field: { value } }) => (
+            <>
+              {renderDropdownButton(
+                getGenderDisplayName(value),
+                "Selecione o gênero",
+                () => setShowGenderModal(true)
+              )}
+              {errors.gender && (
+                <Text style={styles.errorText}>{errors.gender.message}</Text>
+              )}
+            </>
+          )}
+        />
+      </View>
 
       <Controller
         control={control}
@@ -1206,6 +1261,16 @@ export default function AddPetScreen() {
             const state = brazilStates.find((s) => s.name === stateName);
             setValue("state", state?.uf || "");
           }
+        )}
+
+        {/* Gender Modal */}
+        {renderModal(
+          showGenderModal,
+          () => setShowGenderModal(false),
+          "Selecione o Gênero",
+          genderOptions,
+          (genderDisplayName) =>
+            setValue("gender", getGenderFromDisplayName(genderDisplayName))
         )}
       </KeyboardAvoidingView>
     </SafeAreaView>

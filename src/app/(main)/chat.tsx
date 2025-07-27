@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,134 +9,219 @@ import {
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/contexts/ThemeContext';
+} from "react-native";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useAuth } from "@clerk/clerk-expo";
+import { ChatMessageDTO, ChatRoomDTO } from "@/dtos/chatDto";
+import { useChat } from "@/contexts/ChatContext";
 import * as SignalR from '@microsoft/signalr';
-import { useUser } from '@/hooks/useUser';
-import { useAuth } from '@clerk/clerk-expo';
-
-const CHAT_URL = process.env.EXPO_PUBLIC_CHAT_URL!;
 
 export default function ChatScreen() {
-  const { userId: theirUserId, userName: theirUserName, petId } = useLocalSearchParams<{ userId: string; userName: string; petId: string }>();
+  const {
+    userId: theirUserId,
+    userName: theirUserName,
+    petId,
+  } = useLocalSearchParams<{
+    userId: string;
+    userName: string;
+    petId: string;
+  }>();
   const { userId } = useAuth();
-  
+  const { safeInvoke, connectionState } = useChat();
   const theme = useTheme();
   const router = useRouter();
   const flatListRef = useRef<FlatList>(null);
-  const [inputText, setInputText] = useState('');
-  const [messages, setMessages] = useState<Array<{
-    id: string,
-    senderId: string,
-    senderName: string,
-    content: string,
-    sentAt: string
-  }>>([]);
-  const [roomId, setRoomId] = useState<string | null>(null);
 
-  const connectionRef = useRef<SignalR.HubConnection | null>(null);
+  const [inputText, setInputText] = useState("");
+  const [messages, setMessages] = useState<ChatMessageDTO[]>([]);
+  const [room, setRoom] = useState<ChatRoomDTO | null>(null);
 
+  // Load chat room and messages when connection is ready and IDs available
   useEffect(() => {
     let isMounted = true;
-    const connection = new SignalR.HubConnectionBuilder()
-      .withUrl(CHAT_URL)
-      .withAutomaticReconnect()
-      .build();
 
-    connectionRef.current = connection;
+    const joinAndFetch = async () => {
+      if (
+        connectionState !== SignalR.HubConnectionState.Connected || // 1 === Connected
+        !userId ||
+        !theirUserId ||
+        !petId
+      )
+        return;
 
-    // Handle incoming messages
-    connection.on('ReceiveMessage', (messageDto: any) => {
-      setMessages(prev => [
-        ...prev,
-        {
-          id: messageDto.id,
-          senderId: messageDto.senderId,
-          senderName: messageDto.senderName,
-          content: messageDto.content,
-          sentAt: messageDto.sentAt,
-        },
-      ]);
-    });
+      const chatRoom = await safeInvoke<ChatRoomDTO>(
+        "JoinPrivateChat",
+        userId,
+        theirUserId,
+        petId
+      );
+      if (!chatRoom || !chatRoom.id || !isMounted) return;
+      setRoom(chatRoom);
 
-    connection
-      .start()
-      .then(async () => {
-        // 1. Ask backend for room (get or create)
-        console.log("eu", userId);
-        console.log("ele", theirUserId)
-        const room = await connection.invoke('JoinPrivateChat', userId, theirUserId, petId);
-        if (!room || !room.id) throw new Error("Failed to get room from backend");  
-        if (!isMounted) return;
+      await safeInvoke("JoinRoomGroup", chatRoom.id);
 
-        setRoomId(room.id);
+      const history = await safeInvoke<ChatMessageDTO[]>(
+        "GetMessages",
+        chatRoom.id,
+        1,
+        50
+      );
+      if (isMounted && Array.isArray(history)) {
+        setMessages(history);
+      }
+    };
 
-        // 2. Join the SignalR group for this room
-        await connection.invoke('JoinRoomGroup', room.id);
+    joinAndFetch();
 
-        // 3. Fetch message history
-        const history = await connection.invoke('GetMessages', room.id, 1, 50);
-        if (isMounted && Array.isArray(history)) {
-          setMessages(
-            history.map((m: any) => ({
-              id: m.id,
-              senderId: m.senderId,
-              senderName: m.senderName,
-              content: m.content,
-              sentAt: m.sentAt,
-            }))
-          );
-        }
-      })
-      .catch(err => {
-        console.error('SignalR Connection Error: ', err);
-      });
-
-    // Cleanup on unmount
     return () => {
       isMounted = false;
-      connection.off('ReceiveMessage');
-      connection.stop().catch(() => {});
-      connectionRef.current = null;
     };
-      
-  }, [userId]);  
+  }, [userId, theirUserId, petId, connectionState, safeInvoke]);
+
+  // Listen for new messages using the context's latestMessage
+  const { latestMessage } = useChat();
+
+  useEffect(() => {
+    if (!latestMessage) return;
+    // Only append if this message belongs to this room!
+    if (latestMessage.chatRoomId !== room?.id) return;
+    setMessages((prev) => [...prev, latestMessage]);
+  }, [latestMessage, room?.id]);
+
+  // Listen for message seen/delivered events using context's connection
+  const { connection } = useChat();
+
+  useEffect(() => {
+    if (!connection || !room?.id) return;
+
+    // "MessagesMarkedAsSeen" handler
+    const handleMessagesMarkedAsSeen = (
+      chatRoomId: string,
+      seenMessages: any,
+      viewerClerkId: string
+    ) => {
+      if (!Array.isArray(seenMessages)) return;
+      if (chatRoomId !== room.id) return;
+      setMessages((prev) =>
+        prev.map((msg) =>
+          seenMessages.find((sm: any) => sm.id === msg.id)
+            ? { ...msg, wasSeen: true, seenByClerkId: viewerClerkId }
+            : msg
+        )
+      );
+    };
+
+    // "MessageDelivered" handler
+    const handleMessageDelivered = (
+      messageId: string,
+      recipientId: string,
+      deliveredMessage: ChatMessageDTO
+    ) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, wasDelivered: true, wasDeliveredAt: deliveredMessage.wasDeliveredAt }
+            : msg
+        )
+      );
+    };
+
+    connection.on("MessagesMarkedAsSeen", handleMessagesMarkedAsSeen);
+    connection.on("MessageDelivered", handleMessageDelivered);
+
+    return () => {
+      connection.off("MessagesMarkedAsSeen", handleMessagesMarkedAsSeen);
+      connection.off("MessageDelivered", handleMessageDelivered);
+    };
+  }, [connection, room?.id]);
+
+  // Mark as seen when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (!room?.id || !userId || messages.length === 0) return;
+      const unseen = messages.filter(
+        (msg) => !msg.wasSeen && msg.senderId !== userId
+      );
+      if (unseen.length > 0) {
+        safeInvoke("MarkMessagesAsSeen", room.id, userId).catch((e) =>
+          console.error("MarkMessagesAsSeen error", e)
+        );
+      }
+    }, [room?.id, userId, messages, safeInvoke])
+  );
 
   const sendMessage = async () => {
-    if (connectionRef.current && inputText.trim() && roomId && userId) {
-      await connectionRef.current.invoke('SendMessage', roomId, userId, inputText);
-      setInputText('');
-      // No need to manually add to messages, since you'll receive it via 'ReceiveMessage'
-    }
+    if (!inputText.trim() || !room?.id || !userId || !theirUserId) return;
+    await safeInvoke(
+      "SendMessage",
+      room.id,
+      userId,
+      theirUserId,
+      inputText.trim()
+    );
+    setInputText("");
   };
 
-  const renderMessage = ({ item } : any) => {
-    const isUser = item.senderId === userId
-    
+  const renderMessage = ({ item }: { item: ChatMessageDTO }) => {
+    const isUser = item.senderId === userId;
+    let statusIcon = "✓✓";
+    let statusIconColor = theme.colors.textSecondary;
+    if (
+      isUser &&
+      item.wasSeen &&
+      item.seenByClerkId &&
+      item.seenByClerkId !== userId
+    ) {
+      // Seen: blue color
+      statusIconColor = '#007AFF'; // iOS blue, or pick your preferred blue
+    }
+
     return (
-      <View style={[
-        styles.messageContainer,
-        isUser ? styles.userMessageContainer : styles.otherMessageContainer
-      ]}>
-        <View style={[
-          styles.messageBubble,
-          isUser ? styles.userMessageBubble : styles.otherMessageBubble,
-          { backgroundColor: isUser ? theme.colors.primary : theme.colors.card }
-        ]}>
-          <Text style={[
-            styles.messageText,
-            { color: isUser ? theme.colors.text : theme.colors.text }
-          ]}>
+      <View
+        style={[
+          styles.messageContainer,
+          isUser ? styles.userMessageContainer : styles.otherMessageContainer,
+        ]}
+      >
+        <View
+          style={[
+            styles.messageBubble,
+            isUser ? styles.userMessageBubble : styles.otherMessageBubble,
+            {
+              backgroundColor: isUser ? theme.colors.primary : theme.colors.card,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.messageText,
+              { color: isUser ? theme.colors.text : theme.colors.text },
+            ]}
+          >
             {item.content}
           </Text>
-          <Text style={[
-            styles.messageTime,
-            { color: isUser ? theme.colors.textSecondary : theme.colors.textSecondary }
-          ]}>
-            {new Date(item.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
+          <View style={styles.messageFooter}>
+            <Text
+              style={[styles.messageTime, { color: theme.colors.textSecondary }]}
+            >
+              {new Date(item.sentAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </Text>
+            {isUser && (
+              <Text
+                style={[
+                  styles.seenIndicator,
+                  { color: statusIconColor },
+                ]}
+              >
+                {statusIcon}
+              </Text>
+            )}
+          </View>
         </View>
       </View>
     );
@@ -144,26 +229,29 @@ export default function ChatScreen() {
 
   const containerStyles = [
     styles.container,
-    { backgroundColor: theme.colors.background }
+    { backgroundColor: theme.colors.background },
   ];
 
   const headerStyles = [
     styles.header,
-    { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }
+    {
+      backgroundColor: theme.colors.card,
+      borderBottomColor: theme.colors.border,
+    },
   ];
 
   const inputContainerStyles = [
     styles.inputContainer,
-    { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }
+    { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border },
   ];
 
   const inputStyles = [
     styles.input,
-    { 
+    {
       backgroundColor: theme.colors.background,
       color: theme.colors.text,
-      borderColor: theme.colors.border
-    }
+      borderColor: theme.colors.border,
+    },
   ];
 
   return (
@@ -172,20 +260,26 @@ export default function ChatScreen() {
       <View style={headerStyles}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => router.push("/messages")}
         >
           <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={[styles.headerName, { color: theme.colors.text }]}>
-            {theirUserName || 'Chat'}
+            {theirUserName || "Chat"}
           </Text>
-          <Text style={[styles.headerStatus, { color: theme.colors.textSecondary }]}>
+          <Text
+            style={[styles.headerStatus, { color: theme.colors.textSecondary }]}
+          >
             Online
           </Text>
         </View>
         <TouchableOpacity style={styles.moreButton}>
-          <MaterialCommunityIcons name="dots-vertical" size={24} color={theme.colors.text} />
+          <MaterialCommunityIcons
+            name="dots-vertical"
+            size={24}
+            color={theme.colors.text}
+          />
         </TouchableOpacity>
       </View>
 
@@ -198,12 +292,26 @@ export default function ChatScreen() {
         style={styles.messagesList}
         contentContainerStyle={styles.messagesContainer}
         showsVerticalScrollIndicator={false}
-        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        onContentSizeChange={() =>
+          flatListRef.current?.scrollToEnd({ animated: true })
+        }
+        scrollEventThrottle={16}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Text
+              style={[styles.emptyText, { color: theme.colors.textSecondary }]}
+            >
+              {messages.length === 0
+                ? "No messages yet"
+                : `Loading ${messages.length} messages...`}
+            </Text>
+          </View>
+        )}
       />
 
       {/* Input */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={inputContainerStyles}
       >
         <View style={styles.inputRow}>
@@ -219,7 +327,11 @@ export default function ChatScreen() {
           <TouchableOpacity
             style={[
               styles.sendButton,
-              { backgroundColor: inputText.trim() ? theme.colors.primary : theme.colors.border }
+              {
+                backgroundColor: inputText.trim()
+                  ? theme.colors.primary
+                  : theme.colors.border,
+              },
             ]}
             onPress={sendMessage}
             disabled={!inputText.trim()}
@@ -227,7 +339,11 @@ export default function ChatScreen() {
             <MaterialCommunityIcons
               name="send"
               size={20}
-              color={inputText.trim() ? theme.colors.text : theme.colors.textSecondary}
+              color={
+                inputText.trim()
+                  ? theme.colors.text
+                  : theme.colors.textSecondary
+              }
             />
           </TouchableOpacity>
         </View>
@@ -241,8 +357,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -255,7 +371,7 @@ const styles = StyleSheet.create({
   },
   headerName: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   headerStatus: {
     fontSize: 14,
@@ -274,13 +390,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   userMessageContainer: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   otherMessageContainer: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   messageBubble: {
-    maxWidth: '80%',
+    maxWidth: "80%",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 20,
@@ -301,7 +417,17 @@ const styles = StyleSheet.create({
   messageTime: {
     fontSize: 12,
     marginTop: 4,
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
+  },
+  messageFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    marginTop: 4,
+  },
+  seenIndicator: {
+    fontSize: 12,
+    marginLeft: 4,
   },
   inputContainer: {
     paddingHorizontal: 16,
@@ -309,8 +435,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    alignItems: "flex-end",
     gap: 8,
   },
   input: {
@@ -326,7 +452,17 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
-}); 
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    textAlign: "center",
+  },
+});

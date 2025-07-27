@@ -31,6 +31,7 @@ export interface UserApiResponse {
   contactType: ContactType;
   createdAt: string;
   updatedAt: string;
+  expoPushToken: string;
 }
 
 // Pet Types

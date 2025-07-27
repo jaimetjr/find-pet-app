@@ -26,8 +26,13 @@ import { useMapToggle } from "@/hooks/useMapToggle";
 import { usePerformance } from "@/hooks/usePerformance";
 import { useRetry } from "@/hooks/useRetry";
 import { useAuth } from "@clerk/clerk-expo";
+import { useRegisterPushToken } from "@/hooks/useRegisterPushToken";
+import { useNotificationListener } from "@/hooks/useNotificationListener";
+import Constants from "expo-constants";
 
 export default function HomeScreen() {
+  useRegisterPushToken();
+  useNotificationListener();
   const theme = useTheme();
   const [filterModalVisible, setFilterModalVisible] = useState<boolean>(false);
 
@@ -46,9 +51,6 @@ export default function HomeScreen() {
   const { userLocation, hasLocationPermission } = useLocation();
   const { isLoading: isLoadingUser, hasCheckedUser, user } = useUser();
   const { userId } = useAuth();
-  useEffect(() => {
-    console.log('user', userId);
-  }, [userId]);
 
   // Custom hooks for business logic
   const {
@@ -162,3 +164,4 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
 });
+

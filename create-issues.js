@@ -4,6 +4,7 @@ const { execSync } = require("child_process");
 const file = "github-issues.md";
 const content = fs.readFileSync(file, "utf8");
 
+console.log(content);
 // Match each block starting with ## Issue #
 const issueBlocks = content.split(/^## Issue #[\d]+:/gm).slice(1); // discard text before first issue
 

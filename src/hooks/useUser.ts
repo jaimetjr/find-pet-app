@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-expo';
 import { useUserAuth } from '@/contexts/UserAuthContext';
 import { useRouter } from 'expo-router';
+import { UserDTO } from '@/dtos/user/userDto';
 
 export const useUser = () => {
   const { userId } = useAuth();
@@ -9,7 +10,7 @@ export const useUser = () => {
   const { getUser } = useUserAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserDTO | null>(null);
   const [hasCheckedUser, setHasCheckedUser] = useState<boolean>(false);
 
   useEffect(() => {

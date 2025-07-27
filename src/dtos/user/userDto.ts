@@ -9,5 +9,6 @@ export interface UserDTO {
     phone : string;
     avatar : string;
     contactType : ContactType;
-    approvalStatus : ApprovalStatus
+    approvalStatus : ApprovalStatus;
+    expoPushToken : string;
 }

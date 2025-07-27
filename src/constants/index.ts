@@ -6,7 +6,9 @@ export const API_ENDPOINTS = {
   AUTH_REGISTER: '/auth/register',
   AUTH_ME: '/auth/me',
   AUTH_UPDATE: '/auth/update',
+  AUTH_UPDATE_EXPO_PUSH_TOKEN: '/auth/update-expo-push-token',
   CHAT_ROOMS: '/chat',
+  CHAT_MARK_MESSAGE: '/chat/MarkMessageAsSeen'
 } as const;
 
 // Environment Variables

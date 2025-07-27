@@ -44,7 +44,6 @@ export const useWarmUpBrowser = () => {
             strategy,
             redirectUrl: AuthSession.makeRedirectUri(),
           });
-
         if (createdSessionId) {
           console.log('createdSessionId', authSessionResult);
           setActive!({ session: createdSessionId });

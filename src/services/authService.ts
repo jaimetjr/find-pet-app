@@ -6,6 +6,8 @@ import { BaseService } from "./baseService";
 import { API_ENDPOINTS, DEFAULTS } from "@/constants";
 import { UserApiResponse, RegisterUserRequest, ApiResponse } from "@/types/api";
 import { authenticatedApi } from "./api";
+import { UpdateExpoPushTokenDTO } from "@/dtos/user/updateExpoPushTokenDto";
+import { ErrorHandler } from "@/utils/errorHandler";
 
 export const register = async (model: RegisterUserDTO, avatar?: string): Promise<Result<UserDTO>> => {
   const formData = new FormData();
@@ -98,4 +100,14 @@ export const updateProfile = async (model: UpdateUserDTO, avatar?: string): Prom
   }
 
   return BaseService.putFormData<UserApiResponse>(`${API_ENDPOINTS.AUTH_UPDATE}/${model.id}`, formData);
+};
+
+export const updateExpoPushToken = async (model: UpdateExpoPushTokenDTO): Promise<Result<any>> => {
+  try {
+    const response = await authenticatedApi.patch(API_ENDPOINTS.AUTH_UPDATE_EXPO_PUSH_TOKEN, model);
+    return response.data;
+  } catch (error) {
+    ErrorHandler.logError(error, `PATCH ${API_ENDPOINTS.AUTH_UPDATE_EXPO_PUSH_TOKEN}`);
+    throw ErrorHandler.extractErrorMessages(error);
+  }
 };

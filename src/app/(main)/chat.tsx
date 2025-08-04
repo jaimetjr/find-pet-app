@@ -9,34 +9,47 @@ import {
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
+  Image,
 } from "react-native";
-import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import {
+  useLocalSearchParams,
+  useRouter,
+  useFocusEffect,
+  Stack,
+} from "expo-router";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@clerk/clerk-expo";
 import { ChatMessageDTO, ChatRoomDTO } from "@/dtos/chatDto";
 import { useChat } from "@/contexts/ChatContext";
-import * as SignalR from '@microsoft/signalr';
-
+import * as SignalR from "@microsoft/signalr";
+import { useHeaderHeight } from "@react-navigation/elements";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { ScrollView } from "react-native-gesture-handler";
 export default function ChatScreen() {
   const {
     userId: theirUserId,
     userName: theirUserName,
+    userAvatar: theirUserAvatar,
     petId,
   } = useLocalSearchParams<{
     userId: string;
     userName: string;
+    userAvatar: string;
     petId: string;
   }>();
-  const { userId } = useAuth();
-  const { safeInvoke, connectionState } = useChat();
   const theme = useTheme();
   const router = useRouter();
+  const { userId } = useAuth();
   const flatListRef = useRef<FlatList>(null);
+  const { safeInvoke, connectionState } = useChat();
 
   const [inputText, setInputText] = useState("");
   const [messages, setMessages] = useState<ChatMessageDTO[]>([]);
   const [room, setRoom] = useState<ChatRoomDTO | null>(null);
+  const [onlineStatus, setOnlineStatus] = useState<string>("");
+  const [lastSeen, setLastSeen] = useState<Date | null>(null);
 
   // Load chat room and messages when connection is ready and IDs available
   useEffect(() => {
@@ -71,6 +84,11 @@ export default function ChatScreen() {
       if (isMounted && Array.isArray(history)) {
         setMessages(history);
       }
+
+      // Request initial online status for the other user
+      safeInvoke("OnlineStatus", chatRoom.id, theirUserId).catch((e) =>
+        console.error("Initial OnlineStatus error", e)
+      );
     };
 
     joinAndFetch();
@@ -122,7 +140,11 @@ export default function ChatScreen() {
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === messageId
-            ? { ...msg, wasDelivered: true, wasDeliveredAt: deliveredMessage.wasDeliveredAt }
+            ? {
+                ...msg,
+                wasDelivered: true,
+                wasDeliveredAt: deliveredMessage.wasDeliveredAt,
+              }
             : msg
         )
       );
@@ -130,10 +152,18 @@ export default function ChatScreen() {
 
     connection.on("MessagesMarkedAsSeen", handleMessagesMarkedAsSeen);
     connection.on("MessageDelivered", handleMessageDelivered);
+    
+    // Handle user offline events
+    connection.on("UserOffline", (isOnline: boolean, lastSeenDate: Date | null) => {
+      console.log("UserOffline received:", isOnline, lastSeenDate);
+      setOnlineStatus(isOnline ? "Online" : "");
+      setLastSeen(isOnline ? null : lastSeenDate);
+    });
 
     return () => {
       connection.off("MessagesMarkedAsSeen", handleMessagesMarkedAsSeen);
       connection.off("MessageDelivered", handleMessageDelivered);
+      connection.off("UserOffline");
     };
   }, [connection, room?.id]);
 
@@ -149,7 +179,12 @@ export default function ChatScreen() {
           console.error("MarkMessagesAsSeen error", e)
         );
       }
-    }, [room?.id, userId, messages, safeInvoke])
+
+      // Request online status for the other user
+      safeInvoke("OnlineStatus", room.id, theirUserId).catch((e) =>
+        console.error("OnlineStatus error", e)
+      );
+    }, [room?.id, userId, messages, safeInvoke, theirUserId])
   );
 
   const sendMessage = async () => {
@@ -164,80 +199,9 @@ export default function ChatScreen() {
     setInputText("");
   };
 
-  const renderMessage = ({ item }: { item: ChatMessageDTO }) => {
-    const isUser = item.senderId === userId;
-    let statusIcon = "✓✓";
-    let statusIconColor = theme.colors.textSecondary;
-    if (
-      isUser &&
-      item.wasSeen &&
-      item.seenByClerkId &&
-      item.seenByClerkId !== userId
-    ) {
-      // Seen: blue color
-      statusIconColor = '#007AFF'; // iOS blue, or pick your preferred blue
-    }
-
-    return (
-      <View
-        style={[
-          styles.messageContainer,
-          isUser ? styles.userMessageContainer : styles.otherMessageContainer,
-        ]}
-      >
-        <View
-          style={[
-            styles.messageBubble,
-            isUser ? styles.userMessageBubble : styles.otherMessageBubble,
-            {
-              backgroundColor: isUser ? theme.colors.primary : theme.colors.card,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.messageText,
-              { color: isUser ? theme.colors.text : theme.colors.text },
-            ]}
-          >
-            {item.content}
-          </Text>
-          <View style={styles.messageFooter}>
-            <Text
-              style={[styles.messageTime, { color: theme.colors.textSecondary }]}
-            >
-              {new Date(item.sentAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </Text>
-            {isUser && (
-              <Text
-                style={[
-                  styles.seenIndicator,
-                  { color: statusIconColor },
-                ]}
-              >
-                {statusIcon}
-              </Text>
-            )}
-          </View>
-        </View>
-      </View>
-    );
-  };
-
   const containerStyles = [
     styles.container,
     { backgroundColor: theme.colors.background },
-  ];
-
-  const headerStyles = [
-    styles.header,
-    {
-      backgroundColor: theme.colors.card,
-      borderBottomColor: theme.colors.border,
-    },
   ];
 
   const inputContainerStyles = [
@@ -254,36 +218,149 @@ export default function ChatScreen() {
     },
   ];
 
+  const renderMessage = ({ item }: { item: ChatMessageDTO }) => {
+    const isUser = item.senderId === userId;
+    let statusIcon = "✓✓";
+    let statusIconColor = theme.colors.textSecondary;
+    if (
+      isUser &&
+      item.wasSeen &&
+      item.seenByClerkId &&
+      item.seenByClerkId !== userId
+    ) {
+      // Seen: blue color
+      statusIconColor = "#007AFF"; // iOS blue, or pick your preferred blue
+    }
+
+    return (
+      <View
+        style={[
+          styles.messageContainer,
+          isUser ? styles.userMessageContainer : styles.otherMessageContainer,
+        ]}
+      >
+        <View
+          style={[
+            styles.messageBubble,
+            isUser ? styles.userMessageBubble : styles.otherMessageBubble,
+            {
+              backgroundColor: isUser
+                ? theme.colors.primary
+                : theme.colors.card,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.messageText,
+              { color: isUser ? theme.colors.text : theme.colors.text },
+            ]}
+          >
+            {item.content}
+          </Text>
+          <View style={styles.messageFooter}>
+            <Text
+              style={[
+                styles.messageTime,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
+              {new Date(item.sentAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </Text>
+            {isUser && (
+              <Text style={[styles.seenIndicator, { color: statusIconColor }]}>
+                {statusIcon}
+              </Text>
+            )}
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={containerStyles}>
-      {/* Header */}
-      <View style={headerStyles}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.push("/messages")}
-        >
-          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-        <View style={styles.headerInfo}>
-          <Text style={[styles.headerName, { color: theme.colors.text }]}>
-            {theirUserName || "Chat"}
-          </Text>
-          <Text
-            style={[styles.headerStatus, { color: theme.colors.textSecondary }]}
-          >
-            Online
-          </Text>
-        </View>
-        <TouchableOpacity style={styles.moreButton}>
-          <MaterialCommunityIcons
-            name="dots-vertical"
-            size={24}
-            color={theme.colors.text}
-          />
-        </TouchableOpacity>
-      </View>
-
-      {/* Messages */}
+      <Stack.Screen
+        options={{
+          headerTransparent: false,
+          headerShown: true,
+          headerTitle: () => (
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              {theirUserAvatar ? (
+                <View style={{ marginRight: 8 }}>
+                  <View
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      overflow: "hidden",
+                      backgroundColor: theme.colors.background,
+                    }}
+                  >
+                    <Image
+                      source={{ uri: theirUserAvatar as string }}
+                      style={{ width: "100%", height: "100%" }}
+                    />
+                  </View>
+                </View>
+              ) : null}
+              <View>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: "bold",
+                    color: theme.colors.text,
+                  }}
+                >
+                  {theirUserName}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: "500",
+                    marginTop: 2,
+                    color: onlineStatus === "Online" ? "#4CAF50" : theme.colors.textSecondary,
+                  }}
+                >
+                  {onlineStatus}
+                  {lastSeen !== null
+                    ? (() => {
+                        // If lastSeen is a string (from server), parse it to Date
+                        const dateObj =
+                          typeof lastSeen === "string"
+                            ? new Date(lastSeen)
+                            : lastSeen instanceof Date
+                            ? lastSeen
+                            : null;
+                        if (!dateObj || isNaN(dateObj.getTime())) return "";
+                        const day = dateObj.getDate().toString().padStart(2, "0");
+                        const month = (dateObj.getMonth() + 1)
+                          .toString()
+                          .padStart(2, "0");
+                        const year = dateObj.getFullYear();
+                        const hours = dateObj.getHours().toString().padStart(2, "0");
+                        const minutes = dateObj.getMinutes().toString().padStart(2, "0");
+                        return `Visto por último: ${day}/${month}/${year} ${hours}:${minutes}`;
+                      })()
+                    : ""}
+                </Text>
+              </View>
+            </View>
+          ),
+          headerTitleStyle: {
+            fontSize: 20,
+            fontWeight: "bold",
+          },
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.navigate('/(main)/messages')}>
+              <MaterialCommunityIcons name="chevron-left" size={30} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -308,46 +385,43 @@ export default function ChatScreen() {
           </View>
         )}
       />
-
-      {/* Input */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={inputContainerStyles}
-      >
-        <View style={styles.inputRow}>
+      <View style={[inputContainerStyles, styles.inputRow]}>
+        <KeyboardAwareScrollView
+          style={{
+            flex: 1,
+          }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            flexDirection: "row",
+            alignItems: "center",
+          }}
+          extraHeight={0}
+          extraScrollHeight={0}
+          enableResetScrollToCoords={true}
+          
+          enableAutomaticScroll={true}
+          keyboardOpeningTime={250}
+          enableOnAndroid={true}
+          keyboardShouldPersistTaps="handled"
+        >
           <TextInput
-            style={inputStyles}
+            style={[inputStyles]}
             value={inputText}
             onChangeText={setInputText}
             placeholder="Digite sua mensagem..."
             placeholderTextColor={theme.colors.textSecondary}
             multiline
-            maxLength={500}
           />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              {
-                backgroundColor: inputText.trim()
-                  ? theme.colors.primary
-                  : theme.colors.border,
-              },
-            ]}
-            onPress={sendMessage}
-            disabled={!inputText.trim()}
-          >
+
+          <TouchableOpacity onPress={sendMessage} style={styles.sendButton} disabled={!inputText.trim()}>
             <MaterialCommunityIcons
               name="send"
-              size={20}
-              color={
-                inputText.trim()
-                  ? theme.colors.text
-                  : theme.colors.textSecondary
-              }
+              size={24}
+              color={theme.colors.text}
             />
           </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -432,7 +506,9 @@ const styles = StyleSheet.create({
   inputContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
+    paddingBottom: 18,
     borderTopWidth: 1,
+    alignItems: "center",
   },
   inputRow: {
     flexDirection: "row",

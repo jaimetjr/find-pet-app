@@ -136,7 +136,7 @@ export default function ProtectedLayout() {
         <Drawer.Screen
           name="chat"
           options={{
-            title: "Chat",
+            title: "",
             drawerItemStyle: { display: "none" }, // Hide from drawer menu
           }}
         />

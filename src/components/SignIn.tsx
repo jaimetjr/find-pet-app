@@ -16,6 +16,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { isClerkAPIResponseError, useSignIn } from "@clerk/clerk-expo";
 import SignInWith from "@/components/SignInWith";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 const signInSchema = z.object({
   email: z.string({ message: "Email é obrigatório" }).email("Email inválido"),
@@ -84,92 +85,112 @@ export default function SignIn() {
   };
 
   return (
-    <View style={styles.signInContainer}>
-      <View style={styles.form}>
-        <CustomInput
-          control={control}
-          name="email"
-          placeholder="seu.email@exemplo.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          label="Email"
-          icon="mail"
-        />
-
-        <CustomInput
-          control={control}
-          name="password"
-          placeholder="Senha"
-          autoCapitalize="none"
-          secureTextEntry={true}
-          label="Senha"
-          icon="lock"
-        />
-      </View>
-
-      <TouchableOpacity
-        style={styles.forgotPassword}
-        onPress={() =>
-          Alert.alert(
-            "Recuperação de senha",
-            "Funcionalidade em desenvolvimento."
-          )
-        }
+    <KeyboardAwareScrollView
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+      enableOnAndroid={true}
+      enableAutomaticScroll={true}
+      extraScrollHeight={120}
+      extraHeight={120}
+      contentContainerStyle={{flexGrow: 1}}
+      style={styles.container}
       >
-        <Text
-          style={[styles.forgotPasswordText, { color: theme.colors.primary }]}
+      <View>
+        <View style={styles.form}>
+          <CustomInput
+            control={control}
+            name="email"
+            placeholder="seu.email@exemplo.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            label="Email"
+            icon="mail"
+          />
+
+          <CustomInput
+            control={control}
+            name="password"
+            placeholder="Senha"
+            autoCapitalize="none"
+            secureTextEntry={true}
+            label="Senha"
+            icon="lock"
+          />
+        </View>
+
+        <TouchableOpacity
+          style={styles.forgotPassword}
+          onPress={() =>
+            Alert.alert(
+              "Recuperação de senha",
+              "Funcionalidade em desenvolvimento."
+            )
+          }
         >
-          Esqueceu sua senha?
-        </Text>
-      </TouchableOpacity>
-
-      {errors.root && (
-        <Text style={{ color: "crimson" }}>{errors.root.message}</Text>
-      )}
-
-      <TouchableOpacity
-        style={[styles.loginButton, { backgroundColor: theme.colors.primary }]}
-        onPress={handleSubmit(onSignIn)}
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? (
-          <ActivityIndicator color={theme.colors.text} />
-        ) : (
-          <Text style={[styles.loginButtonText, { color: theme.colors.text }]}>
-            Entrar
-          </Text>
-        )}
-      </TouchableOpacity>
-
-      <View style={styles.dividerContainer}>
-        <View
-          style={[styles.divider, { backgroundColor: theme.colors.border }]}
-        />
-        <Text style={[styles.dividerText, { color: theme.colors.text }]}>
-          ou
-        </Text>
-        <View
-          style={[styles.divider, { backgroundColor: theme.colors.border }]}
-        />
-      </View>
-
-      <View style={{ flexDirection: "row", gap: 10, marginHorizontal: "auto" }}>
-        <SignInWith strategy="oauth_google" />
-        <SignInWith strategy="oauth_apple" />
-        <SignInWith strategy="oauth_facebook" />
-      </View>
-
-      <View style={styles.registerContainer}>
-        <Text style={[styles.registerText, { color: theme.colors.text }]}>
-          Não tem uma conta?
-        </Text>
-        <TouchableOpacity onPress={() => router.push("/(auth)/sign-up")}>
-          <Text style={[styles.registerLink, { color: theme.colors.primary }]}>
-            Cadastre-se
+          <Text
+            style={[styles.forgotPasswordText, { color: theme.colors.primary }]}
+          >
+            Esqueceu sua senha?
           </Text>
         </TouchableOpacity>
+
+        {errors.root && (
+          <Text style={{ color: "crimson" }}>{errors.root.message}</Text>
+        )}
+
+        <TouchableOpacity
+          style={[
+            styles.loginButton,
+            { backgroundColor: theme.colors.primary },
+          ]}
+          onPress={handleSubmit(onSignIn)}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator color={theme.colors.text} />
+          ) : (
+            <Text
+              style={[styles.loginButtonText, { color: theme.colors.text }]}
+            >
+              Entrar
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        <View style={styles.dividerContainer}>
+          <View
+            style={[styles.divider, { backgroundColor: theme.colors.border }]}
+          />
+          <Text style={[styles.dividerText, { color: theme.colors.text }]}>
+            ou
+          </Text>
+          <View
+            style={[styles.divider, { backgroundColor: theme.colors.border }]}
+          />
+        </View>
+
+        <View
+          style={{ flexDirection: "row", gap: 10, marginHorizontal: "auto" }}
+        >
+          <SignInWith strategy="oauth_google" />
+          <SignInWith strategy="oauth_apple" />
+          <SignInWith strategy="oauth_facebook" />
+        </View>
+
+        <View style={styles.registerContainer}>
+          <Text style={[styles.registerText, { color: theme.colors.text }]}>
+            Não tem uma conta?
+          </Text>
+          <TouchableOpacity onPress={() => router.push("/(auth)/sign-up")}>
+            <Text
+              style={[styles.registerLink, { color: theme.colors.primary }]}
+            >
+              Cadastre-se
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </KeyboardAwareScrollView>
   );
 }
 

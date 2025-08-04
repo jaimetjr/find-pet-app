@@ -79,9 +79,8 @@ yarn-error.*
 *.md
 github-issues.md
 create-issues.js
-android
-ios
-path
 sync.js
 test-refactoring.js
 # @end expo-cli
+
+android

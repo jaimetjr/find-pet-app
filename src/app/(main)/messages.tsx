@@ -88,6 +88,7 @@ export default function MessagesScreen() {
             params: {
               userId: theirUser.clerkId,
               userName: theirUser.name,
+              userAvatar: theirUser.avatar,
               petId: item.pet.id,
             },
           });

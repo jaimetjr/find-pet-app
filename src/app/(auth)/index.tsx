@@ -20,6 +20,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import SignInWith from "@/components/SignInWith";
 import SignIn from "../../components/SignIn";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 const signInSchema = z.object({
   email: z.string({ message: "Email é obrigatório" }).email("Email inválido"),
@@ -44,30 +45,50 @@ export default function WelcomeScreen() {
   });
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-      <View style={{ flex: 1, justifyContent: 'center' }}>
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <View style={[styles.content, { marginTop: 32 }]}>
-            <View style={styles.logoContainer}>
-              <Image
-                source={require('@/assets/SimbaNala.png')}
-                style={styles.logo}
-                resizeMode="contain"
-              />
+    <KeyboardAwareScrollView
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+      enableOnAndroid={true}
+      enableAutomaticScroll={true}
+      extraScrollHeight={10}
+      extraHeight={10}
+      contentContainerStyle={{flexGrow: 1}}
+      style={styles.container}
+      >
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
+        <View style={{ flex: 1, justifyContent: "center" }}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets={true}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={[styles.content, { marginTop: 32 }]}>
+              <View style={styles.logoContainer}>
+                <Image
+                  source={require("@/assets/SimbaNala.png")}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={styles.textContainer}>
+                <Text style={[styles.title, { color: theme.colors.text }]}>
+                  Bem-vindo ao Achando Lar
+                </Text>
+                <Text style={[styles.subtitle, { color: theme.colors.text }]}>
+                  Conectando pets especiais a lares amorosos
+                </Text>
+              </View>
+              <View style={styles.signInContainer}>
+                <SignIn />
+              </View>
             </View>
-            <View style={styles.textContainer}>
-              <Text style={[styles.title, { color: theme.colors.text }]}>Bem-vindo ao Achando Lar</Text>
-              <Text style={[styles.subtitle, { color: theme.colors.text }]}>Conectando pets especiais a lares amorosos</Text>
-            </View>
-            <View style={styles.signInContainer}>
-              <SignIn />
-            </View>
-          </View>
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+          </ScrollView>
+        </View>
+      </SafeAreaView>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -77,8 +98,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   content: {

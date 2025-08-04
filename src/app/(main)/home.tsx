@@ -28,7 +28,6 @@ import { useRetry } from "@/hooks/useRetry";
 import { useAuth } from "@clerk/clerk-expo";
 import { useRegisterPushToken } from "@/hooks/useRegisterPushToken";
 import { useNotificationListener } from "@/hooks/useNotificationListener";
-import Constants from "expo-constants";
 
 export default function HomeScreen() {
   useRegisterPushToken();

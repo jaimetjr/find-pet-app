@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1065549212286",
+    "project_id": "find-pet-push-notification",
+    "storage_bucket": "find-pet-push-notification.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1065549212286:android:a59bf3e2080ed21c0f862f",
+        "android_client_info": {
+          "package_name": "com.jaimetjr.findpetapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD8lWk3mOPFrWOvWQxcGIlQb1bmzjd6DyA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

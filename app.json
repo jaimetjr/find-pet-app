@@ -27,6 +27,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.jaimetjr.findpetapp",
+      "softwareKeyboardLayoutMode": "pan",
       "googleServicesFile": "./path/to/google-services.json"
     },
     "notification": {

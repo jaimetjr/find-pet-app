@@ -6,8 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   SafeAreaView,
   Image,
 } from "react-native";
@@ -23,10 +21,7 @@ import { useAuth } from "@clerk/clerk-expo";
 import { ChatMessageDTO, ChatRoomDTO } from "@/dtos/chatDto";
 import { useChat } from "@/contexts/ChatContext";
 import * as SignalR from "@microsoft/signalr";
-import { useHeaderHeight } from "@react-navigation/elements";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import { ScrollView } from "react-native-gesture-handler";
 export default function ChatScreen() {
   const {
     userId: theirUserId,

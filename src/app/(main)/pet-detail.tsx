@@ -231,6 +231,7 @@ export default function PetDetailScreen() {
                     params: {
                       userId: pet.user?.clerkId || '',
                       userName: pet.user?.name || 'Usuário',
+                      userAvatar: pet.user?.avatar || '',
                       petId: petId
                     }
                   });

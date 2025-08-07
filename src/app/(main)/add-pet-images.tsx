@@ -16,6 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { addPetImages, getPet, deletePetImage } from '@/services/petService';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@clerk/clerk-expo';
+import { useChat } from '@/contexts/ChatContext';
 
 export default function AddPetImagesScreen() {
   const theme = useTheme();
@@ -25,6 +26,7 @@ export default function AddPetImagesScreen() {
   const [existingImages, setExistingImages] = useState<Array<{id: string, imageUrl: string}>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingPet, setIsLoadingPet] = useState(true);
+  const { safeInvoke} = useChat();
   const isFromMyPets = fromMyPets === 'true';
   const { userId } = useAuth();
   // Load existing pet images
@@ -186,7 +188,7 @@ export default function AddPetImagesScreen() {
     
     try {
       await addPetImages(petId, userId!, photos);
-      
+      safeInvoke("SendPetNotification", userId, petId);
       Alert.alert(
         'Sucesso',
         'Fotos adicionadas com sucesso!',

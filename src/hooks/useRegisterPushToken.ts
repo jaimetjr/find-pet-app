@@ -25,8 +25,7 @@ export function useRegisterPushToken() {
   });
 
   useEffect(() => {
-    console.log(user?.expoPushToken);
-    if (!userId || !user || user.expoPushToken) return;
+    if (!userId || !user) return;
 
     async function registerToken() {
 
@@ -44,6 +43,7 @@ export function useRegisterPushToken() {
       //if (Device.isDevice) {
         const { status: existingStatus } =
           await Notifications.getPermissionsAsync();
+          console.log('existingStatus', existingStatus);
         let finalStatus = existingStatus;
         if (existingStatus !== "granted") {
           const { status } = await Notifications.requestPermissionsAsync();
@@ -53,10 +53,11 @@ export function useRegisterPushToken() {
           console.warn("Permission for push notifications was denied");
           return;
         }
-        console.log(finalStatus);
+        console.log('jura ne');
         const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
         const expoPushToken = await Notifications.getExpoPushTokenAsync(projectId);
         token = expoPushToken.data;
+        console.log('token', token);
         if (token) {
             await updateExpoPushToken({
               clerkId: userId!,

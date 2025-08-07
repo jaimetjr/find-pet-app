@@ -6,6 +6,7 @@ export function useNotificationListener() {
     const router = useRouter();
 
     useEffect(() => {
+        console.log("useNotificationListener");
         const foregroundSub = Notifications.addNotificationReceivedListener((notification) => {
             console.log("Notification received:", notification);
         });
@@ -14,6 +15,11 @@ export function useNotificationListener() {
             console.log("Notification response received:", response);
             const data = response.notification.request.content.data;
             console.log("Notification data:", data);
+            if (data.screen === "chat") {
+                router.push(`/chat?userId=${data.userId}&userName=${data.userName}&userAvatar=${data.userAvatar}&petId=${data.petId}`);
+            } else if (data.screen === "pet-detail") {
+                router.push(`/pet-detail?petId=${data.petId}`);
+            }
         });
 
         return () => {

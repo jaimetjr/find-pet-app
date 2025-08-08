@@ -76,7 +76,6 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-*.md
 github-issues.md
 create-issues.js
 sync.js

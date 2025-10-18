@@ -3,10 +3,11 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
-  SafeAreaView,
+  //SafeAreaView,
   FlatList,
   Alert,
 } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -26,12 +27,9 @@ import { useMapToggle } from "@/hooks/useMapToggle";
 import { usePerformance } from "@/hooks/usePerformance";
 import { useRetry } from "@/hooks/useRetry";
 import { useAuth } from "@clerk/clerk-expo";
-import { useRegisterPushToken } from "@/hooks/useRegisterPushToken";
-import { useNotificationListener } from "@/hooks/useNotificationListener";
 
 export default function HomeScreen() {
-  useRegisterPushToken();
-  useNotificationListener();
+ 
   const theme = useTheme();
   const [filterModalVisible, setFilterModalVisible] = useState<boolean>(false);
 
@@ -80,7 +78,7 @@ export default function HomeScreen() {
   // Show loading state only if we're still checking user or loading pets
   if (isLoadingUser || isLoadingPets) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView edges={['left','right','bottom']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <LoadingSpinner />
       </SafeAreaView>
     );
@@ -112,7 +110,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView edges={['left','right','bottom']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <SearchFilterHeader
         searchQuery={searchQuery}
         onSearchChange={handleSearch}

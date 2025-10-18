@@ -39,20 +39,19 @@ export const useWarmUpBrowser = () => {
   
     const onPress = useCallback(async () => {
       try {
-        const { createdSessionId, setActive, authSessionResult } =
+        const { createdSessionId, setActive, authSessionResult, signIn, signUp } =
           await startSSOFlow({
             strategy,
-            redirectUrl: AuthSession.makeRedirectUri(),
+            redirectUrl: AuthSession.makeRedirectUri({native: 'findpetapp://oauth-callback'}),
           });
-        if (createdSessionId) {
-          console.log('createdSessionId', authSessionResult);
-          setActive!({ session: createdSessionId });
-        } else {
-          // If there is no `createdSessionId`,
-          // there are missing requirements, such as MFA
-          // Use the `signIn` or `signUp` returned from `startSSOFlow`
-          // to handle next steps
-        }
+          
+          if (createdSessionId) {
+            setActive!({ session: createdSessionId });
+          } else {
+            console.log("signIn full object:", JSON.stringify(signIn, null, 2));
+            console.log("authSessionResult", JSON.stringify(authSessionResult, null, 2));
+          }
+
       } catch (err) {
         console.error(JSON.stringify(err, null, 2));
       }

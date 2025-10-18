@@ -105,6 +105,7 @@ export default function SignUp() {
           setError(field, { message: error.longMessage || error.message });
         });
       } else {
+        console.log(err);
         setError("root", { message: "Erro ao fazer login" });
       }
     } finally {
@@ -132,6 +133,8 @@ export default function SignUp() {
           icon="mail"
           placeholder="seu.email@exemplo.com"
           autoComplete="email"
+          autoCapitalize="none"
+          keyboardType="email-address"
         />
       </View>
       <View style={styles.inputContainer}>

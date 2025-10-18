@@ -81,3 +81,5 @@ create-issues.js
 sync.js
 test-refactoring.js
 # @end expo-cli
+
+android

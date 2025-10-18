@@ -11,24 +11,14 @@ export function useRegisterPushToken() {
   const { userId } = useAuth();
   const { user } = useUser();
 
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-      shouldShowAlert: true,
-      shouldShowBanner: true,
-      shouldShowList: true,
-      priority: Notifications.AndroidNotificationPriority.MAX,
-      visibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-
-    }),
-  });
 
   useEffect(() => {
     if (!userId || !user) return;
 
     async function registerToken() {
 
+      try {
+        console.log('registering token');
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
           name: 'Encontrando um Lar',
@@ -43,7 +33,6 @@ export function useRegisterPushToken() {
       //if (Device.isDevice) {
         const { status: existingStatus } =
           await Notifications.getPermissionsAsync();
-          console.log('existingStatus', existingStatus);
         let finalStatus = existingStatus;
         if (existingStatus !== "granted") {
           const { status } = await Notifications.requestPermissionsAsync();
@@ -53,18 +42,23 @@ export function useRegisterPushToken() {
           console.warn("Permission for push notifications was denied");
           return;
         }
-        console.log('jura ne');
         const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
-        const expoPushToken = await Notifications.getExpoPushTokenAsync(projectId);
+        console.log('projectId', projectId);
+        const expoPushToken = await Notifications.getExpoPushTokenAsync({projectId});
         token = expoPushToken.data;
         console.log('token', token);
         if (token) {
-            await updateExpoPushToken({
+            const response = await updateExpoPushToken({
               clerkId: userId!,
               expoPushToken: token,
             });
+            console.log('response', response.success);
           }
-      //}
+        //}
+      } catch (error) {
+        console.error('Error registering push token', error);
+      }
+
 
     }
 

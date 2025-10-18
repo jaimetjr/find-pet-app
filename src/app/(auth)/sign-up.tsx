@@ -3,11 +3,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -17,7 +17,7 @@ export default function SignUpScreen() {
   const theme = useTheme();
   const router = useRouter();
   return (
-    <SafeAreaView
+    <SafeAreaView edges={['left','right','bottom']} 
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <KeyboardAvoidingView

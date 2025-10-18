@@ -3,13 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
   Alert,
   ActivityIndicator,
   Image,
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -233,7 +233,7 @@ export default function AddPetImagesScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView edges={['left','right','bottom']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.push('/(main)/my-pets')} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
@@ -332,7 +332,7 @@ export default function AddPetImagesScreen() {
               onPress={pickFromGallery}
             >
               <Ionicons name="images" size={20} color="white" />
-              <Text style={styles.photoButtonText}>Escolher da Galeria</Text>
+              <Text style={styles.photoButtonText}>Galeria</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -353,8 +353,7 @@ export default function AddPetImagesScreen() {
             style={[
               styles.primaryButton, 
               { 
-                backgroundColor: theme.colors.primary,
-                flex: isFromMyPets ? 1 : undefined
+                backgroundColor: theme.colors.primary
               }
             ]}
             onPress={handleSaveImages}
@@ -481,10 +480,10 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     flexDirection: 'row',
-    gap: 12,
+    justifyContent: 'space-between',
   },
   primaryButton: {
-    flex: 1,
+    width: '48%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -498,7 +497,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   secondaryButton: {
-    flex: 1,
+    width: '48%',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,

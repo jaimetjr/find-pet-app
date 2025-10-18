@@ -2,7 +2,6 @@ import {
   View,
   Text,
   Button,
-  SafeAreaView,
   StyleSheet,
   Image,
   TouchableOpacity,
@@ -10,6 +9,7 @@ import {
   Alert,
   ScrollView,
 } from "react-native";
+import { SafeAreaView} from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/contexts/ThemeContext";
 import SignInScreen from "../../components/SignIn";
@@ -55,10 +55,10 @@ export default function WelcomeScreen() {
       contentContainerStyle={{flexGrow: 1}}
       style={styles.container}
       >
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      <SafeAreaView edges={['left','right','bottom']} 
+        style={{ flex: 1, backgroundColor: theme.colors.background }}
       >
-        <View style={{ flex: 1, justifyContent: "center" }}>
+        <View style={{ justifyContent: "center" }}>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"

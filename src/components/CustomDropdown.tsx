@@ -106,7 +106,6 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: 4,
     marginTop: 8,
-    fontWeight: "bold",
   },
   pickerContainer: {
     borderWidth: 1,

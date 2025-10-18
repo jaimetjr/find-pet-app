@@ -3,12 +3,12 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   FlatList,
   TouchableOpacity,
   Image,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -175,7 +175,7 @@ export default function MessagesScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView
+      <SafeAreaView edges={['left','right','bottom']}
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
         <View style={styles.loadingContainer}>
@@ -186,7 +186,7 @@ export default function MessagesScreen() {
   }
 
   return (
-    <SafeAreaView
+    <SafeAreaView edges={['left','right','bottom']}
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <View style={styles.header}>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { TouchableOpacity, Text, View, StyleSheet, Platform } from "react-native";
+import { TouchableOpacity, Text, View, StyleSheet, Platform, TextInput } from "react-native";
 import { Controller, Control, FieldValues, Path } from "react-hook-form";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
@@ -49,9 +49,23 @@ export default function CustomDatePicker<T extends FieldValues>({
               onPress={() => setShow(true)}
               activeOpacity={0.8}
             >
-              <Text style={{ color: value ? theme.colors.text : '#999', flex: 1 }}>
-                {value ? formatDateForDisplay(formatDateForBackend(value)) : placeholder}
-              </Text>
+              <TextInput
+                style={{ color: theme.colors.text, flex: 1 }}
+                placeholder={placeholder}
+                value={value}
+                keyboardType="numeric"
+                onChangeText={(text) => {
+                  // Allow free input
+                  const numericText = text.replace(/[^0-9]/g, '');
+                  let formattedText = numericText;
+                  // Format the input into a date format only when the input is complete
+                  if (numericText.length === 8) {
+                    formattedText = numericText.slice(0, 2) + '/' + numericText.slice(2, 4) + '/' + numericText.slice(4);
+                  }
+                  // Update the input value
+                  onChange(formattedText);
+                }}
+              />
               <Ionicons name="calendar-outline" size={20} color={theme.colors.text} style={styles.calendarIcon} />
             </TouchableOpacity>
             {show && (
@@ -84,7 +98,6 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: 4,
     marginTop: 8,
-    fontWeight: "bold",
   },
   pickerContainer: {
     borderWidth: 1,

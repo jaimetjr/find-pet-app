@@ -3,9 +3,9 @@ import {
   Text,
   View,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import CustomInput from "@/components/CustomInput";
 
 import { useForm } from "react-hook-form";
@@ -76,7 +76,7 @@ export default function VerifyScreen() {
   };
 
   return (
-    <SafeAreaView
+    <SafeAreaView edges={['left','right','bottom']} 
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <View style={styles.content}>

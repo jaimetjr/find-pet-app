@@ -1,14 +1,13 @@
-import { Redirect, Stack, useRouter } from "expo-router";
+import { Redirect} from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
-import { useUserAuth } from "@/contexts/UserAuthContext";
-import { useEffect } from "react";
 import Drawer from "expo-router/drawer";
+import { DrawerToggleButton } from "@react-navigation/drawer";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/contexts/ThemeContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 export default function ProtectedLayout() {
-  const { isSignedIn, isLoaded, signOut } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
   const theme = useTheme();
 
   if (!isLoaded) {
@@ -24,6 +23,9 @@ export default function ProtectedLayout() {
       <Drawer
         screenOptions={{
           headerShown: true,
+          headerLeft: ({ tintColor }) => (
+            <DrawerToggleButton tintColor={tintColor} />
+          ),
           headerStyle: {
             backgroundColor: theme.colors.primary,
           },
@@ -52,8 +54,10 @@ export default function ProtectedLayout() {
         <Drawer.Screen
           name="profile-setup"
           options={{
-            title: "Profile Setup",
+            title: "Configuração do Perfil",
             drawerItemStyle: { display: "none" }, // Hide from drawer menu
+            headerLeft: () => null, // Remove hamburger button
+            swipeEnabled: false, // Disable opening drawer via gesture
           }}
         />
         <Drawer.Screen

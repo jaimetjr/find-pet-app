@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   TextInput,
   ScrollView,
@@ -14,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -1107,7 +1107,7 @@ export default function AddPetScreen() {
   // Show loading screen when loading pet data in edit mode
   if (isLoadingPet) {
     return (
-      <SafeAreaView
+      <SafeAreaView edges={['left','right','bottom']}
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
         <View style={styles.loadingContainer}>
@@ -1122,7 +1122,8 @@ export default function AddPetScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['left','right','bottom']}
+      style={{ flex: 1, backgroundColor: theme.colors.background }}
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}

@@ -36,7 +36,7 @@ export interface User {
 
 interface UserAuthContextType {
   userDb: User | null;
-  updateUser: (user: User) => void;
+  updateUser: (user: Partial<User>) => void;
   getUser: (clerkId: string) => Promise<UserDTO | null>;
   registerUser: (user: RegisterUserDTO, avatar?: string) => Promise<Result<UserDTO>>;
   updateUserProfile: (user: UpdateUserDTO, avatar?: string) => Promise<Result<UserDTO>>;
@@ -50,33 +50,28 @@ interface UserAuthProviderProps {
   children: ReactNode;
 }
 
-// Helper to convert UserApiResponse to UserDTO
 function mapUserApiResponseToUserDTO(user: UserApiResponse): UserDTO {
-  // This assumes UserApiResponse and UserDTO are similar, but you may need to map/transform fields as needed.
-  // Add any missing fields with default values if necessary.
   return {
     ...user,
-    contactType: user.contactType ?? 0, // Provide a default if missing
+    contactType: user.contactType ?? 0,
   } as UserDTO;
 }
 
 export const UserAuthProvider = ({ children }: UserAuthProviderProps) => {
   const [userDb, setUser] = useState<User | null>(null);
 
-  const updateUser = (user: User) => {
-    setUser((prev) => ({ ...prev, ...user }));
+  const updateUser = (user: Partial<User>) => {
+    setUser((prev) => (prev ? { ...prev, ...user } : prev));
   };
 
   const getUser = async (clerkId: string): Promise<UserDTO | null> => {
     const user = await getMe(clerkId);
     if (!user) return null;
-    // Convert UserApiResponse to UserDTO
     return mapUserApiResponseToUserDTO(user);
   };
 
   const registerUser = async (user: RegisterUserDTO, avatar?: string): Promise<Result<UserDTO>> => {
     const result = await register(user, avatar);
-    // If result.success, ensure value is UserDTO (convert if needed)
     if (result.success && result.value) {
       return {
         ...result,
@@ -88,7 +83,6 @@ export const UserAuthProvider = ({ children }: UserAuthProviderProps) => {
 
   const updateUserProfile = async (user: UpdateUserDTO, avatar?: string): Promise<Result<UserDTO>> => {
     const result = await updateProfile(user, avatar);
-    // If result.success, ensure value is UserDTO (convert if needed)
     if (result.success && result.value) {
       return {
         ...result,

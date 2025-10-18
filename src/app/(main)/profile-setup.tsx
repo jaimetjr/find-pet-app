@@ -3,7 +3,6 @@ import {
   Text,
   View,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   Image,
   ScrollView,
@@ -12,6 +11,7 @@ import {
   Alert,
 } from "react-native";
 import CustomInput from "@/components/CustomInput";
+import { SafeAreaView } from "react-native-safe-area-context";
 import CustomDatePicker from "@/components/CustomDatePicker";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useEffect, useState } from "react";
@@ -195,7 +195,7 @@ export default function ProfileSetup() {
   };
 
   return (
-    <SafeAreaView
+    <SafeAreaView edges={['left','right','bottom']}
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <KeyboardAvoidingView

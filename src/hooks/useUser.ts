@@ -4,13 +4,30 @@ import { useUserAuth } from '@/contexts/UserAuthContext';
 import { useRouter } from 'expo-router';
 import { UserDTO } from '@/dtos/user/userDto';
 
+type UserWithDetails = UserDTO & {
+  birthDate?: string;
+  cpf?: string;
+  phone?: string;
+  bio?: string;
+  cep?: string;
+  address?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  number?: string;
+  complement?: string;
+  notifications?: boolean;
+  avatar?: string;
+  expoPushToken?: string;
+};
+
 export const useUser = () => {
   const { userId } = useAuth();
   
   const { getUser } = useUserAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [user, setUser] = useState<UserDTO | null>(null);
+  const [user, setUser] = useState<UserWithDetails | null>(null);
   const [hasCheckedUser, setHasCheckedUser] = useState<boolean>(false);
 
   useEffect(() => {
@@ -24,7 +41,7 @@ export const useUser = () => {
         setIsLoading(true);
         const userDto = await getUser(userId);
         if (userDto) {
-          setUser(userDto);
+          setUser(userDto as UserWithDetails);
         } else {
           // Only redirect to profile setup if user doesn't exist
           router.push("/(main)/profile-setup");

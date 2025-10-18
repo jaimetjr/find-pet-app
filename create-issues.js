@@ -1,5 +1,7 @@
 const fs = require("fs");
 const { execSync } = require("child_process");
+const os = require("os");
+const path = require("path");
 
 const file = "github-issues.md";
 const content = fs.readFileSync(file, "utf8");
@@ -29,9 +31,12 @@ issueBlocks.forEach((block, index) => {
 
   console.log(`📌 Creating issue: ${title}`);
   try {
-    execSync(`gh issue create --title "${title}" --body "${body}"`, {
+    const tmpFile = path.join(os.tmpdir(), `issue-${Date.now()}-${index + 1}.md`);
+    fs.writeFileSync(tmpFile, body, "utf8");
+    execSync(`gh issue create --title "${title}" --body-file "${tmpFile}"`, {
       stdio: "inherit",
     });
+    fs.unlinkSync(tmpFile);
   } catch (err) {
     console.error(`❌ Failed to create issue: ${title}`);
   }

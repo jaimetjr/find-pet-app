@@ -3,11 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   FlatList,
   TouchableOpacity,
   Image,
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -61,7 +61,7 @@ export default function FavoritesScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView edges={['left','right','bottom']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.text }]}>Favorites</Text>
         <Text style={[styles.subtitle, { color: theme.colors.text }]}>

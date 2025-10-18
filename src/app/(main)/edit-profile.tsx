@@ -3,7 +3,6 @@ import {
   Text,
   View,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   Image,
   ScrollView,
@@ -11,6 +10,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import CustomInput from "@/components/CustomInput";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useEffect, useState } from "react";
@@ -154,10 +154,21 @@ export default function EditProfile() {
       if (result.success) {
         // Update local state
         const updatedUser = {
-          ...user,
-          ...data,
           avatar: avatar || user?.avatar,
-        };
+          phone: data.phone,
+          birthDate: data.birthDate,
+          cpf: data.cpf,
+          bio: data.bio,
+          cep: data.cep,
+          address: data.address,
+          neighborhood: data.neighborhood,
+          city: data.city,
+          state: data.state,
+          number: data.number,
+          complement: data.complement,
+          notifications: data.notifications,
+          // contactType stored in backend; not part of User in context type
+        } as const;
         updateUser(updatedUser);
         
         Alert.alert(
@@ -219,7 +230,7 @@ export default function EditProfile() {
 
   if (isLoadingProfile) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView edges={['left','right','bottom']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={[styles.loadingText, { color: theme.colors.text }]}>
@@ -231,15 +242,15 @@ export default function EditProfile() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView edges={['left','right','bottom']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
+          <TouchableOpacity onPress={() => router.push('/(main)/settings')} style={styles.backButton}>
+            <Ionicons name="arrow-back" Fsize={24} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             Editar Perfil

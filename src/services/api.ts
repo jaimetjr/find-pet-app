@@ -2,7 +2,6 @@ import axios from "axios";
 import { getClerkInstance } from "@clerk/clerk-expo";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
-console.log("API_URL", API_URL);
 
 export const authApi = axios.create({ baseURL: API_URL });
 export const authenticatedApi = axios.create({ baseURL: API_URL });

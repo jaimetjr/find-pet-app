@@ -25,7 +25,6 @@ export default function MyPetsScreen() {
     try {
       setIsLoading(true);
       const pets = await getPetsById();
-      console.log(pets);
       setPets(pets.value);
     } catch (error) {
       console.error('Error fetching pets:', error);

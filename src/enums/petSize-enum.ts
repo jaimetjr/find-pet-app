@@ -7,7 +7,6 @@ export enum PetSize {
 
 export const PetSizeHelper = {
     getLabel: (size: PetSize): string => {
-        console.log(size);
         switch (size) {
             case PetSize.Small:
                 return "Pequeno";

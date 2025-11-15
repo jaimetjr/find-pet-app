@@ -17,7 +17,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.jaimetjr.findpetapp",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "This app needs access to your location to show pets near you and help you find them a home."
       }
     },
     "android": {
@@ -28,7 +29,11 @@
       "edgeToEdgeEnabled": true,
       "package": "com.jaimetjr.findpetapp",
       "softwareKeyboardLayoutMode": "pan",
-      "googleServicesFile": "./path/to/google-services.json"
+      "googleServicesFile": "./path/to/google-services.json",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "notification": {
       "icon": "./src/assets/trayIcon2.png",
@@ -44,7 +49,15 @@
     "plugins": [
         "expo-router",
         "expo-font",
-        "expo-web-browser"
+        "expo-web-browser",
+        [
+          "expo-location",
+          {
+            "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to show pets near you.",
+            "locationAlwaysPermission": "Allow $(PRODUCT_NAME) to use your location in the background.",
+            "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to show pets near you."
+          }
+        ]
     ],
     "experiments": {
       "typedRoutes": true

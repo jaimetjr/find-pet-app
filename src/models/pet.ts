@@ -16,4 +16,5 @@ export type Pet = {
   contactPhone: string
   imageUrl: string // Main image (keeping for backward compatibility)
   images: string[] // Array of image URLs
+  isFavorite: boolean;
 }

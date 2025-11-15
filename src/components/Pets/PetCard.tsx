@@ -1,21 +1,26 @@
 import { MaterialCommunityIcons, Feather } from "@expo/vector-icons"
-import React, { useMemo } from "react"
-import { Text, TouchableOpacity, View, StyleSheet } from "react-native"
+import React, { useMemo, useState } from "react"
+import { Text, TouchableOpacity, View, StyleSheet, ActivityIndicator } from "react-native"
 import { useTheme } from "@/contexts/ThemeContext"
 import { useRouter } from "expo-router"
 import { Pet } from "@/data/pets"
 import { calculateDistance, Coordinates } from "@/utils/locationUtils"
 import ImageCarousel from "../ImageCarousel"
+import { setPetFavorite } from "@/services/petService"
+import { useToast } from "@/hooks/useToast"
 
 export type PetCardProps = {
     pet: Pet
     userLocation: Coordinates
+    onFavoriteToggle?: (petId: string) => void
 }
 
-const PetCard = React.memo(({ pet, userLocation }: PetCardProps) => {
-    const petIsFavorite = false;
+const PetCard = React.memo(({ pet, userLocation, onFavoriteToggle }: PetCardProps) => {
+    const petIsFavorite = pet.isFavorite;
+    const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
     const theme = useTheme()
     const router = useRouter();
+    const { showToast } = useToast();
 
     // Memoize distance calculation
     const petDistance = useMemo(() => {
@@ -78,19 +83,51 @@ const PetCard = React.memo(({ pet, userLocation }: PetCardProps) => {
           />
           <TouchableOpacity
             style={favoriteButtonStyles}
-            onPress={() => {
-              /*if (petIsFavorite) {
-                removeFavorite(item.id)
-              } else {
-                addFavorite(item.id)
-              }*/
+            onPress={async (e) => {
+              e.stopPropagation();
+              if (isTogglingFavorite) return;
+              
+              setIsTogglingFavorite(true);
+              try {
+                const result = await setPetFavorite(pet.id);
+                if (result.success) {
+                  // Update local state
+                  onFavoriteToggle?.(pet.id);
+                  showToast(
+                    petIsFavorite 
+                      ? "Pet removido dos favoritos" 
+                      : "Pet adicionado aos favoritos",
+                    "success"
+                  );
+                } else {
+                  showToast(
+                    result.errors?.join(", ") || "Erro ao atualizar favoritos. Tente novamente.",
+                    "failure"
+                  );
+                }
+              } catch (error) {
+                showToast(
+                  "Erro ao atualizar favoritos. Tente novamente.",
+                  "failure"
+                );
+              } finally {
+                setIsTogglingFavorite(false);
+              }
             }}
+            disabled={isTogglingFavorite}
           >
-            <MaterialCommunityIcons
-              name={petIsFavorite ? "heart" : "heart-outline"}
-              size={20}
-              color={petIsFavorite ? theme.colors.text : theme.colors.primary}
-            />
+            {isTogglingFavorite ? (
+              <ActivityIndicator 
+                size="small" 
+                color={petIsFavorite ? theme.colors.text : theme.colors.primary}
+              />
+            ) : (
+              <MaterialCommunityIcons
+                name={petIsFavorite ? "heart" : "heart-outline"}
+                size={20}
+                color={petIsFavorite ? theme.colors.text : theme.colors.primary}
+              />
+            )}
           </TouchableOpacity>
           <View style={imageCountBadgeStyles}>
             <Text style={[styles.imageCountText, { color: theme.colors.text }]}>{pet.images.length} fotos</Text>

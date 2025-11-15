@@ -23,9 +23,15 @@ export interface PetDTO {
     complement?: string;
     petImages? : PetImagesDTO[];
     user : UserDTO;
+    petFavorites?: PetFavoriteDTO[];
 }
 
 export interface PetImagesDTO {   
     id: string;
     imageUrl: string;
+}
+
+export interface PetFavoriteDTO {
+    isFavorite: boolean;
+    petId: string;
 }

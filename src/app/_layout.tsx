@@ -5,10 +5,12 @@ import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
 import { tokenCache } from "@clerk/clerk-expo/token-cache";
 import { UserAuthProvider } from "@/contexts/UserAuthContext";
 import { ChatProvider } from "@/contexts/ChatContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 import { useNotificationListener } from "@/hooks/useNotificationListener";
 import { useRegisterPushToken } from "@/hooks/useRegisterPushToken";
 import { useEffect } from "react";
 import * as Notifications from "expo-notifications";
+import Toast from "@/components/common/Toast";
 
 function AppBootstrap() {
   Notifications.setNotificationHandler({
@@ -38,16 +40,19 @@ export default function RootLayout() {
   return (
     <ClerkProvider tokenCache={tokenCache}>
       <ThemeProvider>
-        <UserAuthProvider>
-          <AppBootstrap />
-          <ChatProvider>
-            <NotificationNavGate />
-            <Stack>
-              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-              <Stack.Screen name="(main)" options={{ headerShown: false }} />
-            </Stack>
-          </ChatProvider>
-        </UserAuthProvider>
+        <ToastProvider>
+          <UserAuthProvider>
+            <AppBootstrap />
+            <ChatProvider>
+              <NotificationNavGate />
+              <Stack>
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen name="(main)" options={{ headerShown: false }} />
+              </Stack>
+              <Toast />
+            </ChatProvider>
+          </UserAuthProvider>
+        </ToastProvider>
       </ThemeProvider>
     </ClerkProvider>
   );

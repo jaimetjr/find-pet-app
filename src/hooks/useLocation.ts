@@ -12,6 +12,7 @@ export const useLocation = () => {
       try {
         setIsLoading(true);
         const hasPermission = await LocationService.requestPermissions();
+        
         setHasLocationPermission(hasPermission);
 
         if (hasPermission) {

@@ -44,10 +44,9 @@ export default function HomeScreen() {
   const retry = useRetry({ maxAttempts: 3, delay: 1000 });
 
   // Custom hooks for data management
-  const { pets, isLoading: isLoadingPets, refetch: refetchPets } = usePets();
+  const { pets, isLoading: isLoadingPets, refetch: refetchPets, togglePetFavorite } = usePets();
   const { userLocation, hasLocationPermission } = useLocation();
-  const { isLoading: isLoadingUser, hasCheckedUser, user } = useUser();
-  const { userId } = useAuth();
+  const { isLoading: isLoadingUser } = useUser();
 
   // Custom hooks for business logic
   const {
@@ -134,7 +133,11 @@ export default function HomeScreen() {
         data={filteredPets}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <PetCard pet={item} userLocation={userLocation!} />
+          <PetCard 
+            pet={item} 
+            userLocation={userLocation!} 
+            onFavoriteToggle={togglePetFavorite}
+          />
         )}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}

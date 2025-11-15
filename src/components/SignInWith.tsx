@@ -39,13 +39,16 @@ export const useWarmUpBrowser = () => {
   
     const onPress = useCallback(async () => {
       try {
+        console.log('Starting SSO flow for strategy:', strategy);
         const { createdSessionId, setActive, authSessionResult, signIn, signUp } =
           await startSSOFlow({
             strategy,
             redirectUrl: AuthSession.makeRedirectUri({native: 'findpetapp://oauth-callback'}),
           });
+          console.log('SSO flow result:', { strategy, createdSessionId, hasSignIn: !!signIn, hasSignUp: !!signUp });
           
           if (createdSessionId) {
+            console.log('Session created, setting active');
             setActive!({ session: createdSessionId });
           } else {
             console.log("signIn full object:", JSON.stringify(signIn, null, 2));
@@ -53,9 +56,16 @@ export const useWarmUpBrowser = () => {
           }
 
       } catch (err) {
+        console.error('SSO flow error for strategy:', strategy, err);
+        // Check if error is due to user cancellation
+        const errorString = err ? JSON.stringify(err) : '';
+        if (errorString.includes('cancelled') || errorString.includes('cancel') || errorString === '{}') {
+          console.log('OAuth flow cancelled by user');
+          return; // Don't show error for cancellation
+        }
         console.error(JSON.stringify(err, null, 2));
       }
-    }, []);
+    }, [strategy]);
   
     return (
       <Pressable onPress={onPress}>

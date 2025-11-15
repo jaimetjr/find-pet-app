@@ -13,13 +13,13 @@ export const getCoordinatesFromAddress = async (
     const addressString = `${address}, ${city}, ${state}, Brasil`;
     const encodedAddress = encodeURIComponent(addressString);
     
-    const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API}`
-    );
+    //const response = await fetch(
+    //  `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API}`
+    //);
+    const response = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${encodedAddress}&key=${process.env.EXPO_PUBLIC_OPEN_CAGE_API}`);
     const data = await response.json();
-    
-    if (data.status === 'OK' && data.results && data.results.length > 0) {
-      const location = data.results[0].geometry.location;
+    if (data.status && data.status.message === 'OK' && data.results && data.results.length > 0) {
+      const location = data.results[0].geometry;
       return {
         latitude: location.lat,
         longitude: location.lng

@@ -1,17 +1,18 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert, ActivityIndicator } from 'react-native';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons, Feather, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
 import ImageCarousel from '@/components/ImageCarousel';
 import { Pet } from '@/data/pets';
-import { calculateDistance, Coordinates } from '@/utils/locationUtils';
+import { calculateDistance, Coordinates, getCoordinatesFromAddress } from '@/utils/locationUtils';
 import { useLocation } from '@/hooks/useLocation';
-import { getPet } from '@/services/petService';
+import { getPet, setPetFavorite } from '@/services/petService';
 import { PetDTO } from '@/dtos/pet/petDto';
 import { PetGender } from '@/enums/petGender-enum';
 import { PetSizeHelper } from '@/enums/petSize-enum';
 import { ContactType } from '@/enums/contactType';
+import { useToast } from '@/hooks/useToast';
 
 export default function PetDetailScreen() {
   const { petId } = useLocalSearchParams<{ petId: string }>();
@@ -21,46 +22,73 @@ export default function PetDetailScreen() {
   const [pet, setPet] = useState<PetDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
+  const [petCoordinates, setPetCoordinates] = useState<Coordinates | null>(null);
+  const { showToast } = useToast();
+
+  // Fetch pet data function
+  const fetchPet = useCallback(async (showLoading = true) => {
+    if (!petId) {
+      setError('Pet ID is required');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      if (showLoading) {
+        setLoading(true);
+      }
+      setError(null);
+      const result = await getPet(petId);
+      if (result.success) {
+        setPet(result.value);
+        
+        // Calculate coordinates from pet address
+        if (result.value) {
+          const coordinates = await getCoordinatesFromAddress(
+            result.value.cep,
+            result.value.address,
+            result.value.city,
+            result.value.state
+          );
+          setPetCoordinates(coordinates);
+        }
+      } else {
+        setError(result.errors.join(', ') || 'Failed to load pet details');
+      }
+    } catch (err) {
+      setError('Failed to load pet details');
+      console.error('Error fetching pet:', err);
+    } finally {
+      if (showLoading) {
+        setLoading(false);
+      }
+    }
+  }, [petId]);
 
   // Fetch pet data on component mount
   useEffect(() => {
-    const fetchPet = async () => {
-      if (!petId) {
-        setError('Pet ID is required');
-        setLoading(false);
-        return;
+    fetchPet(true); // Show loading on initial fetch
+  }, [fetchPet]);
+
+  // Refetch pet data when screen comes into focus (to get updated favorite status)
+  // Silent refresh - don't show loading if we already have pet data
+  useFocusEffect(
+    useCallback(() => {
+      if (pet) {
+        fetchPet(false); // Silent refresh if we already have data
       }
+    }, [fetchPet, pet])
+  );
 
-      try {
-        setLoading(true);
-        setError(null);
-        const result = await getPet(petId);
-        if (result.success) {
-          console.log(result.value.user.contactType);
-          setPet(result.value);
-        } else {
-          setError(result.errors.join(', ') || 'Failed to load pet details');
-        }
-      } catch (err) {
-        setError('Failed to load pet details');
-        console.error('Error fetching pet:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Calculate favorite status from petFavorites
+  const petIsFavorite = useMemo(() => {
+    return pet?.petFavorites?.some(favorite => favorite.isFavorite === true) || false;
+  }, [pet?.petFavorites]);
 
-    fetchPet();
-  }, [petId]);
-
-  const petIsFavorite = false; // TODO: Replace with actual favorite state
-
-  // Calculate distance if user location is available
+  // Calculate distance if user location and pet coordinates are available
   const petDistance = useMemo(() => {
-    if (!userLocation || !pet) return null;
-    
-    // TODO: Get coordinates from pet data when available
-    // For now, using mock coordinates - this should be replaced with real coordinates from pet data
-    const petCoordinates = { latitude: -23.5505, longitude: -46.6333 }; // Mock coordinates
+    if (!userLocation || !petCoordinates) return null;
     
     const distance = calculateDistance(
       userLocation.latitude,
@@ -70,7 +98,7 @@ export default function PetDetailScreen() {
     );
     
     return distance.toFixed(1);
-  }, [userLocation, pet]);
+  }, [userLocation, petCoordinates]);
 
   // Memoize styles
   const containerStyles = useMemo(() => [
@@ -118,9 +146,54 @@ export default function PetDetailScreen() {
     });
   };
 
-  const toggleFavorite = () => {
-    // TODO: Implement favorite toggle functionality
-    console.log('Toggle favorite for pet:', pet?.id);
+  const toggleFavorite = async () => {
+    if (!pet || isTogglingFavorite) return;
+    
+    setIsTogglingFavorite(true);
+    try {
+      const result = await setPetFavorite(pet.id);
+      if (result.success) {
+        // Update local pet state by toggling the favorite status
+        setPet((prevPet) => {
+          if (!prevPet) return prevPet;
+          
+          const currentFavoriteStatus = prevPet.petFavorites?.some(f => f.isFavorite === true) || false;
+          const updatedFavorites = prevPet.petFavorites 
+            ? prevPet.petFavorites.map(f => ({
+                ...f,
+                isFavorite: !currentFavoriteStatus
+              }))
+            : [{
+                isFavorite: true,
+                petId: prevPet.id
+              }];
+          
+          return {
+            ...prevPet,
+            petFavorites: updatedFavorites
+          };
+        });
+        
+        showToast(
+          petIsFavorite 
+            ? "Pet removido dos favoritos" 
+            : "Pet adicionado aos favoritos",
+          "success"
+        );
+      } else {
+        showToast(
+          result.errors?.join(", ") || "Erro ao atualizar favoritos. Tente novamente.",
+          "failure"
+        );
+      }
+    } catch (error) {
+      showToast(
+        "Erro ao atualizar favoritos. Tente novamente.",
+        "failure"
+      );
+    } finally {
+      setIsTogglingFavorite(false);
+    }
   };
 
   // Show loading state
@@ -157,12 +230,20 @@ export default function PetDetailScreen() {
         <TouchableOpacity
           style={favoriteButtonStyles}
           onPress={toggleFavorite}
+          disabled={isTogglingFavorite}
         >
-          <MaterialCommunityIcons
-            name={petIsFavorite ? "heart" : "heart-outline"}
-            size={24}
-            color={petIsFavorite ? theme.colors.text : theme.colors.primary}
-          />
+          {isTogglingFavorite ? (
+            <ActivityIndicator 
+              size="small" 
+              color={petIsFavorite ? theme.colors.text : theme.colors.primary}
+            />
+          ) : (
+            <MaterialCommunityIcons
+              name={petIsFavorite ? "heart" : "heart-outline"}
+              size={24}
+              color={petIsFavorite ? theme.colors.text : theme.colors.primary}
+            />
+          )}
         </TouchableOpacity>
       </View>
 

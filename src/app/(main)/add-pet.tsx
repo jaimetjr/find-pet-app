@@ -386,9 +386,7 @@ export default function AddPetScreen() {
       } else {
         result = await addPet(petDTO);
       }
-
-      //console.log(result);
-
+      
       if (result.success) {
         const action = isEditMode ? "atualizado" : "registrado";
         Alert.alert(

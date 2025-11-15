@@ -111,6 +111,14 @@ export default function ProfileSetup() {
     });
 
     try {
+      let provider = ProviderEnum.Email;
+      if (user?.primaryEmailAddress) {
+        const loginType = user.primaryEmailAddress.linkedTo[0].type;
+        if (loginType === "oauth_google") {
+          provider = ProviderEnum.Google;
+        }
+      }
+
       const registerDto = new RegisterUserDTO(
         userId,
         user.firstName || "" + " " + user.lastName || "",
@@ -125,14 +133,14 @@ export default function ProfileSetup() {
         data.city,
         data.state,
         data.number,
-        ProviderEnum.Email,
+        provider,
         parseInt(data.contactType) as ContactType,
         data.complement,
         notifications
       );
       const result = await registerUser(registerDto, avatar || undefined);
       if (result.success) {
-        Alert.alert("Sucesso", "Perfil criado com sucesso, você sera direcionado ao aplicatio!");
+        Alert.alert("Sucesso", "Perfil criado com sucesso, você sera direcionado ao aplicativo!");
         router.push("/(main)/home");
       } else {
         setError("root", { message: result.errors.join("\n") });

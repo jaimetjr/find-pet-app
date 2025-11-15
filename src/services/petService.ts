@@ -51,3 +51,7 @@ export const addPetImages = async (id: string, userId : string, images: string[]
 export const deletePetImage = async (petId: string, imageId: string): Promise<Result<boolean>> => {
   return BaseService.delete<boolean>(`${API_ENDPOINTS.PETS}/${petId}/images/${imageId}`);
 }
+
+export const setPetFavorite = async (petId :string) : Promise<Result<boolean>> => {
+  return BaseService.post<boolean>(`${API_ENDPOINTS.PETS}/${petId}/favorite`);
+}

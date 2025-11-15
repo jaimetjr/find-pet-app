@@ -19,7 +19,7 @@ export const usePets = () => {
       petDTO.city,
       petDTO.state
     );
-
+    console.log('coordinates', coordinates);
     return {
       id: petDTO.id,
       name: petDTO.name,
@@ -38,6 +38,7 @@ export const usePets = () => {
       contactPhone: DEFAULTS.PET.CONTACT_PHONE,
       imageUrl: petDTO.petImages?.[0]?.imageUrl || "",
       images: petDTO.petImages?.map(img => img.imageUrl) || [],
+      isFavorite: petDTO.petFavorites?.some(favorite => favorite.isFavorite === true) || false,
     };
   }, []);
 
@@ -50,7 +51,6 @@ export const usePets = () => {
       if (result.success && result.value) {
         const petsPromises = result.value.map(convertPetDTOToPet);
         const pets = await Promise.all(petsPromises);
-        
         setPets(pets);
       } else {
         setError(ERROR_MESSAGES.FAILED_TO_FETCH_PETS);
@@ -68,10 +68,21 @@ export const usePets = () => {
     fetchPets();
   }, [fetchPets]);
 
+  const togglePetFavorite = useCallback((petId: string) => {
+    setPets((prevPets) =>
+      prevPets.map((pet) =>
+        pet.id === petId
+          ? { ...pet, isFavorite: !pet.isFavorite }
+          : pet
+      )
+    );
+  }, []);
+
   return {
     pets,
     isLoading,
     error,
     refetch: fetchPets,
+    togglePetFavorite,
   };
 }; 

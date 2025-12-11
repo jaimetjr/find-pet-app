@@ -8,7 +8,14 @@ export const API_ENDPOINTS = {
   AUTH_UPDATE: '/auth/update',
   AUTH_UPDATE_EXPO_PUSH_TOKEN: '/auth/update-expo-push-token',
   CHAT_ROOMS: '/chat',
-  CHAT_MARK_MESSAGE: '/chat/MarkMessageAsSeen'
+  CHAT_MARK_MESSAGE: '/chat/MarkMessageAsSeen',
+  ADOPTION_REQUESTS: '/adoption-requests',
+  ADOPTION_REQUESTS_RECEIVED: '/adoption-requests/received',
+  ADOPTION_REQUEST_STATUS: (id: string) => `/adoption-requests/${id}/status`,
+  NOTIFICATIONS: '/notifications',
+  NOTIFICATIONS_UNREAD_COUNT: '/notifications/unread-count',
+  NOTIFICATION_READ: (id: string) => `/notifications/${id}/read`,
+  NOTIFICATIONS_READ_ALL: '/notifications/read-all'
 } as const;
 
 // Environment Variables
@@ -32,8 +39,9 @@ export const DEFAULTS = {
   },
   LOCATION: {
     COUNTRY: 'Brasil',
-    DEFAULT_LATITUDE: 0,
-    DEFAULT_LONGITUDE: 0,
+    DEFAULT_LATITUDE: -23.5505, // São Paulo, Brazil
+    DEFAULT_LONGITUDE: -46.6333, // São Paulo, Brazil
+    MOCK_LOCATION_ENABLED: __DEV__, // Only enable in development
   },
 } as const;
 
@@ -50,4 +58,11 @@ export const ERROR_MESSAGES = {
 // Form Validation
 export const VALIDATION = {
   CEP_LENGTH: 8,
+} as const;
+
+// Adoption Requests
+export const ADOPTION_REQUEST_CONSTANTS = {
+  MAX_PENDING_REQUESTS: 5,
+  MESSAGE_MIN_LENGTH: 20,
+  MESSAGE_MAX_LENGTH: 500,
 } as const; 

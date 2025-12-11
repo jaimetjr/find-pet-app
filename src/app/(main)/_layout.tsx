@@ -5,10 +5,15 @@ import { DrawerToggleButton } from "@react-navigation/drawer";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/contexts/ThemeContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+import { useNotifications } from "@/hooks/useNotifications";
 
 export default function ProtectedLayout() {
   const { isSignedIn, isLoaded } = useAuth();
   const theme = useTheme();
+  const router = useRouter();
+  const { unreadCount } = useNotifications(true);
 
   if (!isLoaded) {
     return null;
@@ -18,6 +23,22 @@ export default function ProtectedLayout() {
     return <Redirect href="/" />;
   }
 
+  const NotificationHeaderButton = () => (
+    <TouchableOpacity
+      style={styles.notificationButton}
+      onPress={() => router.push('/notifications')}
+    >
+      <Ionicons name="notifications" size={24} color={theme.colors.text} />
+      {unreadCount > 0 && (
+        <View style={[styles.badge, { backgroundColor: '#ff4752' }]}>
+          <Text style={styles.badgeText}>
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+
   return (
     <ErrorBoundary>
       <Drawer
@@ -26,6 +47,7 @@ export default function ProtectedLayout() {
           headerLeft: ({ tintColor }) => (
             <DrawerToggleButton tintColor={tintColor} />
           ),
+          headerRight: () => <NotificationHeaderButton />,
           headerStyle: {
             backgroundColor: theme.colors.primary,
           },
@@ -121,6 +143,30 @@ export default function ProtectedLayout() {
           }}
         />
         <Drawer.Screen
+          name="adoption-requests"
+          options={{
+            title: "Solicitações de Adoção",
+            drawerLabel: "Solicitações",
+            drawerIcon: ({ color, size }) => (
+              <Ionicons name="document-text" size={size} color={color} />
+            ),
+          }}
+        />
+        <Drawer.Screen
+          name="notifications"
+          options={{
+            title: "Notificações",
+            drawerItemStyle: { display: "none" }, // Hide from drawer since we have header button
+          }}
+        />
+        <Drawer.Screen
+          name="adoption-request-detail"
+          options={{
+            title: "Detalhes da Solicitação",
+            drawerItemStyle: { display: "none" },
+          }}
+        />
+        <Drawer.Screen
           name="signout"
           options={{
             title: "Sair",
@@ -148,3 +194,26 @@ export default function ProtectedLayout() {
     </ErrorBoundary>
   );
 }
+
+const styles = StyleSheet.create({
+  notificationButton: {
+    marginRight: 16,
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+});

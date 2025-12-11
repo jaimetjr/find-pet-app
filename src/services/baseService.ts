@@ -15,9 +15,15 @@ export abstract class BaseService {
 
   public static async post<T>(endpoint: string, data?: any): Promise<Result<T>> {
     try {
+      console.log(`[BaseService.post] ${endpoint}`, JSON.stringify(data, null, 2));
       const response = await authenticatedApi.post(endpoint, data);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      console.error(`[BaseService.post] Error for ${endpoint}:`, {
+        status: error.response?.status,
+        data: error.response?.data,
+        requestData: data,
+      });
       ErrorHandler.logError(error, `POST ${endpoint}`);
       throw ErrorHandler.extractErrorMessages(error);
     }
@@ -29,6 +35,16 @@ export abstract class BaseService {
       return response.data;
     } catch (error) {
       ErrorHandler.logError(error, `PUT ${endpoint}`);
+      throw ErrorHandler.extractErrorMessages(error);
+    }
+  }
+
+  public static async patch<T>(endpoint: string, data?: any): Promise<Result<T>> {
+    try {
+      const response = await authenticatedApi.patch(endpoint, data);
+      return response.data;
+    } catch (error) {
+      ErrorHandler.logError(error, `PATCH ${endpoint}`);
       throw ErrorHandler.extractErrorMessages(error);
     }
   }

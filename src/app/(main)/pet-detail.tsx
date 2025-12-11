@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert, ActivityIndicator } from 'react-native';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert, ActivityIndicator, Modal, TextInput, Platform, KeyboardAvoidingView } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons, Feather, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -13,6 +13,10 @@ import { PetGender } from '@/enums/petGender-enum';
 import { PetSizeHelper } from '@/enums/petSize-enum';
 import { ContactType } from '@/enums/contactType';
 import { useToast } from '@/hooks/useToast';
+import { useAdoptionRequests } from '@/hooks/useAdoptionRequests';
+import { useUser } from '@/hooks/useUser';
+import { AdoptionRequestStatusHelper } from '@/enums/adoptionRequestStatus-enum';
+import { AdoptionRequestDTO } from '@/dtos/adoptionRequestDto';
 
 export default function PetDetailScreen() {
   const { petId } = useLocalSearchParams<{ petId: string }>();
@@ -25,6 +29,18 @@ export default function PetDetailScreen() {
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
   const [petCoordinates, setPetCoordinates] = useState<Coordinates | null>(null);
   const { showToast } = useToast();
+  const { user } = useUser();
+  const { checkPendingRequest, createRequest } = useAdoptionRequests();
+  const [pendingRequest, setPendingRequest] = useState<AdoptionRequestDTO | null>(null);
+  const [checkingRequest, setCheckingRequest] = useState(false);
+  const [requestingAdoption, setRequestingAdoption] = useState(false);
+  const [showAdoptionModal, setShowAdoptionModal] = useState(false);
+  const [adoptionMessage, setAdoptionMessage] = useState('');
+  const hasCheckedRequestRef = useRef<string | null>(null); // Track checked petId
+  const isCheckingRef = useRef(false); // Prevent concurrent checks
+  const lastCheckTimeRef = useRef<number>(0); // Track last check time to prevent rapid checks
+  const petRef = useRef<PetDTO | null>(null); // Store pet in ref to avoid dependency issues
+  const userRef = useRef(user); // Store user in ref to avoid dependency issues
 
   // Fetch pet data function
   const fetchPet = useCallback(async (showLoading = true) => {
@@ -66,19 +82,138 @@ export default function PetDetailScreen() {
     }
   }, [petId]);
 
+  // Update refs when pet or user changes
+  useEffect(() => {
+    petRef.current = pet;
+  }, [pet]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  // Reset when petId changes
+  useEffect(() => {
+    hasCheckedRequestRef.current = null;
+    setPendingRequest(null);
+    lastCheckTimeRef.current = 0; // Reset debounce timer for new pet
+    isCheckingRef.current = false; // Reset checking flag
+  }, [petId]);
+
   // Fetch pet data on component mount
   useEffect(() => {
     fetchPet(true); // Show loading on initial fetch
   }, [fetchPet]);
 
-  // Refetch pet data when screen comes into focus (to get updated favorite status)
+  // Function to check pending request - use refs to avoid dependency issues
+  const checkPendingRequestForPet = useCallback(async () => {
+    // Prevent concurrent checks
+    if (isCheckingRef.current || !petId) return;
+    
+    // Prevent rapid successive checks (debounce)
+    const now = Date.now();
+    if (now - lastCheckTimeRef.current < 1000) {
+      return;
+    }
+    lastCheckTimeRef.current = now;
+    
+    // Get current values from refs to avoid dependency issues
+    const currentPet = petRef.current;
+    const currentUser = userRef.current;
+    if (!currentPet || !currentUser) return;
+    
+    // Don't check if user is the owner
+    if (currentUser.clerkId === currentPet.user?.clerkId) {
+      setPendingRequest(null);
+      return;
+    }
+    
+    isCheckingRef.current = true;
+    setCheckingRequest(true);
+    try {
+      const request = await checkPendingRequest(petId);
+      // Explicitly set to null if no request found (to clear stale state)
+      setPendingRequest(request || null);
+    } catch (err) {
+      console.error('Error checking pending request:', err);
+      // Clear state on error to avoid showing stale data
+      setPendingRequest(null);
+    } finally {
+      setCheckingRequest(false);
+      isCheckingRef.current = false;
+    }
+  }, [petId, checkPendingRequest]);
+
+  // Check for pending adoption request when pet is loaded (only once per pet)
+  useEffect(() => {
+    // Skip if already checked for this petId
+    if (!petId || hasCheckedRequestRef.current === petId) return;
+    
+    // Need both pet and user to proceed
+    if (!pet || !user) return;
+    
+    hasCheckedRequestRef.current = petId; // Mark as checked before API call
+    // Small delay to ensure refs are updated
+    const timeoutId = setTimeout(() => {
+      checkPendingRequestForPet();
+    }, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [petId, pet?.id, user?.clerkId, checkPendingRequestForPet]);
+
+  // Refetch pet data when screen comes into focus
   // Silent refresh - don't show loading if we already have pet data
   useFocusEffect(
     useCallback(() => {
-      if (pet) {
-        fetchPet(false); // Silent refresh if we already have data
+      if (!pet || !petId) return;
+      
+      fetchPet(false); // Silent refresh if we already have data
+    }, [fetchPet, petId])
+  );
+
+  // Re-check pending request when screen comes into focus (separate effect to avoid glitching)
+  useFocusEffect(
+    useCallback(() => {
+      // Only re-check if enough time has passed since last check
+      const now = Date.now();
+      if (now - lastCheckTimeRef.current < 2000) {
+        return; // Don't re-check if checked recently
       }
-    }, [fetchPet, pet])
+      
+      // Get current values from refs
+      const currentPet = petRef.current;
+      const currentUser = userRef.current;
+      if (!currentPet || !currentUser || !petId) return;
+      
+      // Don't check if user is the owner
+      if (currentUser.clerkId === currentPet.user?.clerkId) {
+        setPendingRequest(null);
+        return;
+      }
+      
+      // Reset the check flag to allow re-checking on focus
+      hasCheckedRequestRef.current = null;
+      
+      // Use a delay to batch with pet fetch and prevent rapid successive checks
+      const timeoutId = setTimeout(async () => {
+        if (isCheckingRef.current) return;
+        
+        isCheckingRef.current = true;
+        setCheckingRequest(true);
+        try {
+          const request = await checkPendingRequest(petId);
+          setPendingRequest(request || null);
+        } catch (err) {
+          console.error('Error checking pending request:', err);
+          setPendingRequest(null);
+        } finally {
+          setCheckingRequest(false);
+          isCheckingRef.current = false;
+          lastCheckTimeRef.current = Date.now();
+        }
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
+    }, [petId, checkPendingRequest])
   );
 
   // Calculate favorite status from petFavorites
@@ -196,6 +331,62 @@ export default function PetDetailScreen() {
     }
   };
 
+  const handleAdoptionRequest = () => {
+    if (!pet || !petId) return;
+    
+    Alert.alert(
+      'Solicitar Adoção',
+      'Você deseja enviar uma solicitação de adoção para este pet?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Continuar',
+          onPress: () => {
+            setAdoptionMessage('');
+            setShowAdoptionModal(true);
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSubmitAdoptionRequest = async () => {
+    if (!petId) return;
+    
+    const trimmedMessage = adoptionMessage.trim();
+    
+    if (!trimmedMessage || trimmedMessage.length < 20) {
+      showToast('Por favor, escreva uma mensagem com pelo menos 20 caracteres', 'failure');
+      return;
+    }
+    
+    setRequestingAdoption(true);
+    try {
+      const result = await createRequest({
+        petId: petId,
+        message: trimmedMessage,
+      });
+      
+      if (result.success && result.data) {
+        showToast('Solicitação enviada com sucesso!', 'success');
+        setPendingRequest(result.data);
+        // Mark as checked to prevent immediate re-check, but focus effect will still verify
+        hasCheckedRequestRef.current = petId;
+        setShowAdoptionModal(false);
+        setAdoptionMessage('');
+      } else {
+        showToast(result.error || 'Erro ao enviar solicitação', 'failure');
+        // Clear any stale pending request state on error
+        setPendingRequest(null);
+      }
+    } catch (err) {
+      console.error('Error creating adoption request:', err);
+      showToast('Erro ao enviar solicitação', 'failure');
+    } finally {
+      setRequestingAdoption(false);
+    }
+  };
+
   // Show loading state
   if (loading) {
     return (
@@ -217,7 +408,8 @@ export default function PetDetailScreen() {
   }
 
   return (
-    <ScrollView style={containerStyles}>
+    <>
+      <ScrollView style={containerStyles}>
       {/* Image Section */}
       <View style={styles.imageSection}>
         <ImageCarousel
@@ -352,8 +544,158 @@ export default function PetDetailScreen() {
             </Text>
           )}
         </View>
+
+        {/* Adoption Request Section - Only show if user is not the owner */}
+        {user && pet.user && user.clerkId !== pet.user.clerkId && (
+          <View style={[cardStyles, styles.adoptionCard]}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Adoção</Text>
+            
+            {checkingRequest && !pendingRequest ? (
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+            ) : pendingRequest ? (
+              <View>
+                <View style={styles.requestStatusContainer}>
+                  <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={[styles.requestStatusTitle, { color: theme.colors.text }]}>
+                      Solicitação Enviada
+                    </Text>
+                    <Text style={[styles.requestStatusText, { color: theme.colors.textSecondary }]}>
+                      Status: {AdoptionRequestStatusHelper.getLabel(pendingRequest.status)}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[styles.viewRequestButton, { borderColor: theme.colors.primary }]}
+                  onPress={() => router.push({
+                    pathname: '/adoption-request-detail',
+                    params: { requestId: pendingRequest.id }
+                  })}
+                >
+                  <Text style={[styles.viewRequestText, { color: theme.colors.primary }]}>
+                    Ver Solicitação
+                  </Text>
+                  <Ionicons name="arrow-forward" size={16} color={theme.colors.primary} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View>
+                <Text style={[styles.adoptionDescription, { color: theme.colors.textSecondary }]}>
+                  Interessado em adotar este pet? Envie uma solicitação para o dono!
+                </Text>
+                <TouchableOpacity
+                  style={[styles.adoptionButton, { backgroundColor: theme.colors.primary }]}
+                  onPress={handleAdoptionRequest}
+                  disabled={requestingAdoption}
+                >
+                  {requestingAdoption ? (
+                    <ActivityIndicator size="small" color={theme.colors.text} />
+                  ) : (
+                    <>
+                      <MaterialCommunityIcons name="heart-plus" size={20} color={theme.colors.text} />
+                      <Text style={[styles.adoptionButtonText, { color: theme.colors.text }]}>
+                        Solicitar Adoção
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
       </View>
     </ScrollView>
+
+    {/* Adoption Request Modal */}
+    <Modal
+      visible={showAdoptionModal}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowAdoptionModal(false)}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalOverlay}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowAdoptionModal(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+            style={[styles.modalContent, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                Solicitar Adoção
+              </Text>
+              <TouchableOpacity onPress={() => setShowAdoptionModal(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.modalDescription, { color: theme.colors.textSecondary }]}>
+              Conte ao dono por que você gostaria de adotar este pet:
+            </Text>
+
+            <TextInput
+              style={[
+                styles.modalInput,
+                {
+                  backgroundColor: theme.colors.background,
+                  borderColor: theme.colors.border,
+                  color: theme.colors.text,
+                }
+              ]}
+              placeholder="Escreva sua mensagem aqui... (mínimo 20 caracteres)"
+              placeholderTextColor={theme.colors.textSecondary}
+              value={adoptionMessage}
+              onChangeText={setAdoptionMessage}
+              multiline
+              numberOfLines={6}
+              textAlignVertical="top"
+              maxLength={500}
+            />
+
+            <Text style={[styles.modalCharCount, { color: theme.colors.textSecondary }]}>
+              {adoptionMessage.length}/500 caracteres
+            </Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalCancelButton, { borderColor: theme.colors.border }]}
+                onPress={() => {
+                  setShowAdoptionModal(false);
+                  setAdoptionMessage('');
+                }}
+              >
+                <Text style={[styles.modalCancelText, { color: theme.colors.text }]}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalSubmitButton,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    opacity: adoptionMessage.trim().length >= 20 && !requestingAdoption ? 1 : 0.5,
+                  }
+                ]}
+                onPress={handleSubmitAdoptionRequest}
+                disabled={adoptionMessage.trim().length < 20 || requestingAdoption}
+              >
+                {requestingAdoption ? (
+                  <ActivityIndicator size="small" color={theme.colors.text} />
+                ) : (
+                  <Text style={[styles.modalSubmitText, { color: theme.colors.text }]}>Enviar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </KeyboardAvoidingView>
+    </Modal>
+    </>
   );
 }
 
@@ -498,5 +840,119 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: 8,
+  },
+  adoptionCard: {
+    marginTop: 8,
+  },
+  adoptionDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  adoptionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 10,
+    gap: 8,
+  },
+  adoptionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  requestStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#4CAF5015',
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  requestStatusTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  requestStatusText: {
+    fontSize: 13,
+  },
+  viewRequestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    gap: 8,
+  },
+  viewRequestText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  modalDescription: {
+    fontSize: 14,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 120,
+    marginBottom: 8,
+  },
+  modalCharCount: {
+    fontSize: 12,
+    textAlign: 'right',
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalSubmitButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalSubmitText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

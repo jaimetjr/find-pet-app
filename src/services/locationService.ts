@@ -1,6 +1,7 @@
 import * as Location from 'expo-location';
+import * as Device from 'expo-device';
 import type { Coordinates, LocationWithAddress } from '../types/location';
-import { ERROR_MESSAGES } from '@/constants';
+import { ERROR_MESSAGES, DEFAULTS } from '@/constants';
 import { ErrorHandler } from '@/utils/errorHandler';
 
 export class LocationService {
@@ -42,18 +43,29 @@ export class LocationService {
 
     private static async _getCurrentLocationInternal(retries: number = 2) : Promise<Coordinates | null> {
         try {
+            // Check if running on emulator/simulator
+            const isEmulator = !Device.isDevice;
+            
             // First check if location services are enabled on the device
             const servicesEnabled = await this.checkLocationServicesEnabled();
             if (!servicesEnabled) {
-                console.warn('Location services are disabled on the device');
-                return null;
+                if (isEmulator) {
+                    console.log('📍 Location services unavailable on emulator, will use mock location if location request fails');
+                } else {
+                    console.warn('Location services are disabled on the device. Please enable them in device settings.');
+                    return null;
+                }
             }
 
             // Then check and request permissions
             const hasPermission = await this.requestPermissions();
-            console.log('hasPermission', hasPermission);
             if (!hasPermission) {
-                return null;
+                if (isEmulator) {
+                    console.log('📍 Location permission unavailable on emulator, will use mock location if location request fails');
+                } else {
+                    console.warn('Location permission was denied. Please grant location permission in app settings.');
+                    return null;
+                }
             }
 
             // Retry logic for Android emulator flakiness
@@ -67,40 +79,129 @@ export class LocationService {
                         await new Promise(resolve => setTimeout(resolve, delay));
                     }
 
-                    const location = await Location.getCurrentPositionAsync({
-                        accuracy: Location.Accuracy.Balanced
+                    // Create timeout promise to prevent hanging (30 seconds for GPS to get a fix)
+                    const timeoutMs = 30000; // 30 seconds - GPS can take time
+                    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+                    const timeoutPromise = new Promise<never>((_, reject) => {
+                        timeoutId = setTimeout(() => {
+                            reject(new Error('Location request timeout after 30 seconds. GPS may be slow or unavailable.'));
+                        }, timeoutMs);
                     });
-                    console.log('location', location);
-                    return {
-                        latitude: location.coords.latitude,
-                        longitude: location.coords.longitude
-                    };
+
+                    // Race between location request and timeout
+                    let locationResult: Location.LocationObject | null = null;
+                    try {
+                        locationResult = await Promise.race([
+                            Location.getCurrentPositionAsync({
+                                accuracy: Location.Accuracy.Balanced
+                            }),
+                            timeoutPromise
+                        ]);
+                        
+                        // Clear timeout if location succeeds
+                        if (timeoutId) {
+                            clearTimeout(timeoutId);
+                            timeoutId = null;
+                        }
+                    } catch (raceError: any) {
+                        // Clear timeout if error occurs
+                        if (timeoutId) {
+                            clearTimeout(timeoutId);
+                            timeoutId = null;
+                        }
+                        throw raceError;
+                    }
+                    
+                    if (locationResult) {
+                        console.log('Location retrieved successfully:', {
+                            latitude: locationResult.coords.latitude,
+                            longitude: locationResult.coords.longitude
+                        });
+                        return {
+                            latitude: locationResult.coords.latitude,
+                            longitude: locationResult.coords.longitude
+                        };
+                    }
+                    
+                    // Should not reach here, but TypeScript safety
+                    throw new Error('Location request returned null');
                 } catch (error: any) {
                     lastError = error;
                     const errorMessage = error?.message || String(error);
                     
+                    // Check if it's a timeout error
+                    const isTimeoutError = errorMessage.includes('timeout');
+                    
+                    // Check if it's a permission-related error
+                    const isPermissionError = errorMessage.toLowerCase().includes('permission') || 
+                                            errorMessage.toLowerCase().includes('denied') ||
+                                            errorMessage.toLowerCase().includes('not authorized');
+                    
+                    // Check if it's an unavailable location error (common on emulators)
+                    const isUnavailableError = errorMessage.includes('Current location is unavailable') ||
+                                             errorMessage.includes('location is unavailable') ||
+                                             errorMessage.includes('Location request failed');
+                    
                     // Don't retry if it's a permission issue
-                    if (errorMessage.includes('permission') || errorMessage.includes('denied')) {
+                    if (isPermissionError) {
                         console.warn('Location permission denied, not retrying');
                         break;
                     }
                     
-                    // Log but continue to retry for other errors (like Android emulator flakiness)
-                    if (attempt < retries) {
-                        console.warn(`Location request failed (attempt ${attempt + 1}/${retries + 1}):`, errorMessage);
+                    // For timeout errors, provide more helpful message
+                    if (isTimeoutError) {
+                        console.warn(`Location request timed out after 30 seconds (attempt ${attempt + 1}/${retries + 1}). This may happen if:`, [
+                            'GPS signal is weak or unavailable',
+                            'Using a simulator without location simulation',
+                            'Device location services are slow to respond',
+                            'Network-based location is disabled'
+                        ].join('\n- '));
+                        
+                        // Don't retry timeout errors - they're unlikely to succeed
+                        if (attempt < retries) {
+                            console.log(`Will retry with fresh request (attempt ${attempt + 1}/${retries + 1})...`);
+                        }
+                    } else {
+                        // Log appropriate message based on error type
+                        if (attempt < retries) {
+                            if (isUnavailableError) {
+                                // Silent retry for unavailable errors (common on emulators/devices)
+                                console.log(`Location temporarily unavailable, retrying (attempt ${attempt + 1}/${retries + 1})...`);
+                            } else {
+                                console.warn(`Location request failed (attempt ${attempt + 1}/${retries + 1}):`, errorMessage);
+                            }
+                        }
                     }
                 }
             }
 
-            // All retries failed
+            // All retries failed - check if we should use fallback location
             if (lastError) {
                 const errorMessage = lastError?.message || String(lastError);
-                // Only log as error if it's not the common Android emulator issue
-                if (!errorMessage.includes('Current location is unavailable')) {
-                    ErrorHandler.logError(lastError, 'LocationService.getCurrentLocation');
+                const isUnavailableError = errorMessage.includes('Current location is unavailable') ||
+                                         errorMessage.includes('location is unavailable') ||
+                                         errorMessage.includes('Location request failed') ||
+                                         errorMessage.includes('timeout');
+                
+                // If running on emulator/simulator and location fails, use mock location for development
+                const isEmulator = !Device.isDevice;
+                if (isEmulator) {
+                    const mockLocation = this.getMockLocation();
+                    console.log(`📍 Location unavailable on emulator. Using mock location: São Paulo, Brazil (${mockLocation.latitude}, ${mockLocation.longitude})`);
+                    console.log('📍 To test with real GPS, use a physical device or set location in emulator settings.');
+                    return mockLocation;
+                }
+                
+                if (isUnavailableError) {
+                    // Common issue on emulators or when location services are temporarily unavailable
+                    console.warn('Location unavailable after retries. This may happen if:', [
+                        'Location services are disabled in device settings',
+                        'Using an emulator without location simulation',
+                        'GPS signal is weak or unavailable',
+                        'Device is in airplane mode'
+                    ].join('\n- '));
                 } else {
-                    // Android emulator flakiness - log as warning instead
-                    console.warn('Location temporarily unavailable (this is common on Android emulators):', errorMessage);
+                    ErrorHandler.logError(lastError, 'LocationService.getCurrentLocation');
                 }
             }
             return null;
@@ -145,5 +246,17 @@ export class LocationService {
           coordinates,
           address,
         }
+    }
+
+    /**
+     * Returns a mock location for development/testing on emulators/simulators
+     * Uses São Paulo, Brazil coordinates as default
+     */
+    private static getMockLocation(): Coordinates {
+        // São Paulo, Brazil coordinates (default for Brazilian app)
+        return {
+            latitude: -23.5505,
+            longitude: -46.6333
+        };
     }
 }

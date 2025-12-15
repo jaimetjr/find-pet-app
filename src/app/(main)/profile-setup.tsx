@@ -112,8 +112,8 @@ export default function ProfileSetup() {
 
     try {
       let provider = ProviderEnum.Email;
-      if (user?.primaryEmailAddress) {
-        const loginType = user.primaryEmailAddress.linkedTo[0].type;
+      if (user?.primaryEmailAddress?.linkedTo && user.primaryEmailAddress.linkedTo.length > 0) {
+        const loginType = user.primaryEmailAddress.linkedTo[0]?.type;
         if (loginType === "oauth_google") {
           provider = ProviderEnum.Google;
         }

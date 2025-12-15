@@ -8,17 +8,39 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 
 export function useRegisterPushToken() {
-  const { userId } = useAuth();
-  const { user } = useUser();
-
+  const { userId, isLoaded } = useAuth();
+  const { user, isLoading, hasCheckedUser } = useUser();
 
   useEffect(() => {
-    if (!userId || !user) return;
+    console.log('useRegisterPushToken effect triggered', {
+      userId,
+      hasUser: !!user,
+      isLoading,
+      hasCheckedUser,
+      isLoaded,
+    });
+
+    // Wait for auth to be loaded and user check to complete
+    if (!isLoaded || !userId) {
+      console.log('Waiting for auth to load...');
+      return;
+    }
+
+    // Wait for user check to complete
+    if (!hasCheckedUser || isLoading) {
+      console.log('Waiting for user to load...');
+      return;
+    }
+
+    // Only proceed if user exists (user might be null if profile not set up)
+    if (!user) {
+      console.log('User not found, skipping push token registration');
+      return;
+    }
 
     async function registerToken() {
-
       try {
-        console.log('registering token');
+        console.log('Starting push token registration...');
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
           name: 'Encontrando um Lar',
@@ -63,5 +85,5 @@ export function useRegisterPushToken() {
     }
 
     registerToken();
-  }, [user, userId]);
+  }, [user, userId, isLoaded, isLoading, hasCheckedUser]);
 }

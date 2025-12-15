@@ -50,11 +50,26 @@ export const getAdoptionRequest = async (id: string): Promise<Result<AdoptionReq
  */
 export const updateAdoptionRequestStatus = async (
   id: string,
-  data: UpdateAdoptionRequestStatusDTO
+  data: UpdateAdoptionRequestStatusDTO,
+  clerkId?: string
 ): Promise<Result<AdoptionRequestDTO>> => {
+  // Build request body - backend requires ClerkId for validation
+  const requestBody: any = {
+    status: data.status,
+  };
+  if (data.rejectionReason) {
+    requestBody.rejectionReason = data.rejectionReason;
+  }
+  // Include ClerkId if provided (backend requires it for validation)
+  if (clerkId) {
+    requestBody.clerkId = clerkId;
+  }
+  
+  console.log('[updateAdoptionRequestStatus] Sending request:', JSON.stringify(requestBody, null, 2));
+  
   return BaseService.patch<AdoptionRequestDTO>(
     API_ENDPOINTS.ADOPTION_REQUEST_STATUS(id),
-    data
+    requestBody
   );
 };
 

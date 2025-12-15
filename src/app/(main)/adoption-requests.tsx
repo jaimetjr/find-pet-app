@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,12 +7,14 @@ import { useAdoptionRequests } from '@/hooks/useAdoptionRequests';
 import AdoptionRequestCard from '@/components/AdoptionRequestCard';
 import { AdoptionRequestStatus } from '@/enums/adoptionRequestStatus-enum';
 import { AdoptionRequestDTO } from '@/dtos/adoptionRequestDto';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 
 type TabType = 'my-requests' | 'received';
 type FilterType = 'all' | 'pending' | 'approved' | 'rejected';
 
 export default function AdoptionRequestsScreen() {
   const theme = useTheme();
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
   const {
     myRequests,
     receivedRequests,
@@ -23,15 +25,35 @@ export default function AdoptionRequestsScreen() {
     getSummary,
   } = useAdoptionRequests();
 
-  const [activeTab, setActiveTab] = useState<TabType>('my-requests');
+  // Initialize tab from params or default to 'my-requests'
+  const [activeTab, setActiveTab] = useState<TabType>(
+    (tab === 'received' ? 'received' : 'my-requests') as TabType
+  );
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [refreshing, setRefreshing] = useState(false);
+
+  // Update tab when params change (e.g., when navigating with tab param)
+  useEffect(() => {
+    if (tab === 'received') {
+      setActiveTab('received');
+    } else if (tab === 'my-requests') {
+      setActiveTab('my-requests');
+    }
+  }, [tab]);
 
   // Load data on mount
   useEffect(() => {
     fetchMyRequests();
     fetchReceivedRequests();
   }, []);
+
+  // Refresh data when screen comes into focus (e.g., when navigating back from notifications)
+  useFocusEffect(
+    useCallback(() => {
+      fetchMyRequests();
+      fetchReceivedRequests();
+    }, [fetchMyRequests, fetchReceivedRequests])
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);

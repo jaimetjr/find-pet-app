@@ -40,7 +40,10 @@ export function useNotificationListener() {
       }
 
       // Normalize and route
-      const screen = (data.screen || "").toLowerCase();
+      // Parse screen name (may include query params like "adoption-requests?tab=received")
+      const screenWithParams = (data.screen || "").toLowerCase();
+      const [screen, queryString] = screenWithParams.split("?");
+      const queryParams = new URLSearchParams(queryString || "");
 
       try {
         switch (screen) {
@@ -62,12 +65,37 @@ export function useNotificationListener() {
           case "pet-detail":
           case "pet_detail":
           case "petdetail":
-            if (data.petId) {
-              router.push(
-                `/pet-detail?petId=${encodeURIComponent(data.petId)}`
-              );
+            // Get petId from query params or data
+            const petId = queryParams.get("petId") || data.petId;
+            if (petId) {
+              router.push({
+                pathname: "/pet-detail",
+                params: { petId },
+              });
               markHandled(id);
             }
+            break;
+
+          case "adoption-requests":
+          case "adoption_requests":
+          case "adoptionrequests":
+            // Build params object - tab from query string or data, plus any other params from query string
+            const adoptionParams: Record<string, string> = {};
+            const tab = queryParams.get("tab") || data.tab;
+            if (tab) {
+              adoptionParams.tab = tab;
+            }
+            // Add any other query params from the original query string
+            queryParams.forEach((value, key) => {
+              if (key !== "tab") {
+                adoptionParams[key] = value;
+              }
+            });
+            router.push({
+              pathname: "/adoption-requests",
+              params: adoptionParams,
+            });
+            markHandled(id);
             break;
 
           default:

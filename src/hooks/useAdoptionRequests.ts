@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { AdoptionRequestDTO, CreateAdoptionRequestDTO, UpdateAdoptionRequestStatusDTO } from '@/dtos/adoptionRequestDto';
 import * as adoptionRequestService from '@/services/adoptionRequestService';
 import { AdoptionRequestStatus } from '@/enums/adoptionRequestStatus-enum';
+import { useAuth } from '@clerk/clerk-expo';
 
 export function useAdoptionRequests() {
+  const { userId } = useAuth();
   const [myRequests, setMyRequests] = useState<AdoptionRequestDTO[]>([]);
   const [receivedRequests, setReceivedRequests] = useState<AdoptionRequestDTO[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,22 +77,33 @@ export function useAdoptionRequests() {
     try {
       setLoading(true);
       setError(null);
-      const result = await adoptionRequestService.updateAdoptionRequestStatus(requestId, data);
+      // Pass userId (ClerkId) to the service - backend requires it for validation
+      const result = await adoptionRequestService.updateAdoptionRequestStatus(requestId, data, userId || undefined);
       if (result.success) {
         await fetchReceivedRequests(); // Refresh the list
         return { success: true, data: result.value };
       } else {
-        setError(result.errors.join(', '));
-        return { success: false, error: result.errors.join(', ') };
+        const errorMsg = result.errors?.join(', ') || 'Erro ao atualizar status';
+        setError(errorMsg);
+        return { success: false, error: errorMsg };
       }
     } catch (err: any) {
-      const errorMsg = err.message || 'Failed to update request status';
+      // BaseService throws an array of error messages
+      let errorMsg = 'Failed to update request status';
+      if (Array.isArray(err)) {
+        errorMsg = err.join(', ');
+      } else if (err?.message) {
+        errorMsg = err.message;
+      } else if (typeof err === 'string') {
+        errorMsg = err;
+      }
+      console.error('[useAdoptionRequests.updateRequestStatus] Error:', err);
       setError(errorMsg);
       return { success: false, error: errorMsg };
     } finally {
       setLoading(false);
     }
-  }, [fetchReceivedRequests]);
+  }, [fetchReceivedRequests, userId]);
 
   // Cancel a request (for adopters)
   const cancelRequest = useCallback(async (requestId: string) => {

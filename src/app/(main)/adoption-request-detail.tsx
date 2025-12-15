@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -26,7 +26,7 @@ export default function AdoptionRequestDetailScreen() {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [showRejectionInput, setShowRejectionInput] = useState(false);
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
 
   useEffect(() => {
     loadRequest();
@@ -53,17 +53,14 @@ export default function AdoptionRequestDetailScreen() {
   const handleStatusUpdate = async (newStatus: AdoptionRequestStatus) => {
     if (!request) return;
 
-    // If rejecting, require a reason
-    if (newStatus === AdoptionRequestStatus.Rejected && !showRejectionInput) {
-      setShowRejectionInput(true);
+    // If rejecting, open modal to get reason
+    if (newStatus === AdoptionRequestStatus.Rejected) {
+      setRejectionReason('');
+      setShowRejectionModal(true);
       return;
     }
 
-    if (newStatus === AdoptionRequestStatus.Rejected && !rejectionReason.trim()) {
-      showToast('Por favor, informe o motivo da rejeição', 'failure');
-      return;
-    }
-
+    // For other statuses, proceed with confirmation
     const statusLabel = AdoptionRequestStatusHelper.getLabel(newStatus);
     Alert.alert(
       'Confirmar ação',
@@ -74,10 +71,10 @@ export default function AdoptionRequestDetailScreen() {
           text: 'Confirmar',
           onPress: async () => {
             setActionLoading(true);
-            const result = await updateRequestStatus(request.id, {
+            const payload: { status: AdoptionRequestStatus; rejectionReason?: string } = {
               status: newStatus,
-              rejectionReason: newStatus === AdoptionRequestStatus.Rejected ? rejectionReason : undefined,
-            });
+            };
+            const result = await updateRequestStatus(request.id, payload);
             setActionLoading(false);
 
             if (result.success) {
@@ -90,6 +87,61 @@ export default function AdoptionRequestDetailScreen() {
         },
       ]
     );
+  };
+
+  const handleSubmitRejection = async () => {
+    if (!request) return;
+
+    const trimmedReason = rejectionReason.trim();
+    
+    if (!trimmedReason || trimmedReason.length < 20) {
+      showToast('Por favor, escreva um motivo com pelo menos 20 caracteres', 'failure');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const payload: { status: AdoptionRequestStatus; rejectionReason: string } = {
+        status: AdoptionRequestStatus.Rejected,
+        rejectionReason: trimmedReason,
+      };
+      
+      console.log('[handleSubmitRejection] Submitting rejection:', payload);
+      const result = await updateRequestStatus(request.id, payload);
+
+      if (result.success) {
+        const statusLabel = AdoptionRequestStatusHelper.getLabel(AdoptionRequestStatus.Rejected);
+        showToast(`Status atualizado para ${statusLabel}`, 'success');
+        setShowRejectionModal(false);
+        setRejectionReason('');
+        router.back();
+      } else {
+        const errorMessage = result.error || 'Erro ao atualizar status';
+        console.error('[handleSubmitRejection] Backend error:', errorMessage);
+        showToast(errorMessage, 'failure');
+      }
+    } catch (err: any) {
+      console.error('[handleSubmitRejection] Error:', err);
+      // Try to extract error messages from the error object
+      let errorMessage = 'Erro ao rejeitar solicitação';
+      if (err?.response?.data?.errors) {
+        const errors = err.response.data.errors;
+        const errorMessages: string[] = [];
+        for (const field in errors) {
+          if (Array.isArray(errors[field])) {
+            errorMessages.push(...errors[field]);
+          }
+        }
+        if (errorMessages.length > 0) {
+          errorMessage = errorMessages.join(', ');
+        }
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      showToast(errorMessage, 'failure');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -121,8 +173,9 @@ export default function AdoptionRequestDetailScreen() {
   };
 
   const handleChatWithUser = () => {
-    if (!request) return;
-    const otherUser = isOwner ? request.adopter : request.owner;
+    if (!request || !user) return;
+    const isOwnerLocal = user.clerkId === request.ownerClerkId;
+    const otherUser = isOwnerLocal ? request.adopter : request.owner;
     router.push({
       pathname: '/chat',
       params: {
@@ -249,30 +302,6 @@ export default function AdoptionRequestDetailScreen() {
             </View>
           )}
 
-          {/* Rejection Input */}
-          {showRejectionInput && (
-            <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Motivo da Rejeição</Text>
-              <TextInput
-                style={[
-                  styles.rejectionInput,
-                  { 
-                    backgroundColor: theme.colors.background,
-                    borderColor: theme.colors.border,
-                    color: theme.colors.text 
-                  }
-                ]}
-                placeholder="Informe o motivo da rejeição..."
-                placeholderTextColor={theme.colors.textSecondary}
-                value={rejectionReason}
-                onChangeText={setRejectionReason}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-              />
-            </View>
-          )}
-
           {/* Action Buttons */}
           <View style={styles.actionsContainer}>
             {/* Chat Button */}
@@ -339,6 +368,105 @@ export default function AdoptionRequestDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Rejection Modal */}
+      <Modal
+        visible={showRejectionModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setShowRejectionModal(false);
+          setRejectionReason('');
+        }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => {
+              setShowRejectionModal(false);
+              setRejectionReason('');
+            }}
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              style={[styles.modalContent, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                  Motivo da Rejeição
+                </Text>
+                <TouchableOpacity onPress={() => {
+                  setShowRejectionModal(false);
+                  setRejectionReason('');
+                }}>
+                  <Ionicons name="close" size={24} color={theme.colors.text} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={[styles.modalDescription, { color: theme.colors.textSecondary }]}>
+                Por favor, informe o motivo da rejeição desta solicitação:
+              </Text>
+
+              <TextInput
+                style={[
+                  styles.modalInput,
+                  {
+                    backgroundColor: theme.colors.background,
+                    borderColor: theme.colors.border,
+                    color: theme.colors.text,
+                  }
+                ]}
+                placeholder="Escreva o motivo da rejeição aqui... (mínimo 20 caracteres)"
+                placeholderTextColor={theme.colors.textSecondary}
+                value={rejectionReason}
+                onChangeText={setRejectionReason}
+                multiline
+                numberOfLines={6}
+                textAlignVertical="top"
+                maxLength={500}
+              />
+
+              <Text style={[styles.modalCharCount, { color: theme.colors.textSecondary }]}>
+                {rejectionReason.length}/500 caracteres
+              </Text>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalCancelButton, { borderColor: theme.colors.border }]}
+                  onPress={() => {
+                    setShowRejectionModal(false);
+                    setRejectionReason('');
+                  }}
+                >
+                  <Text style={[styles.modalCancelText, { color: theme.colors.text }]}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.modalSubmitButton,
+                    {
+                      backgroundColor: '#F44336',
+                      opacity: rejectionReason.trim().length >= 20 && !actionLoading ? 1 : 0.5,
+                    }
+                  ]}
+                  onPress={handleSubmitRejection}
+                  disabled={rejectionReason.trim().length < 20 || actionLoading}
+                >
+                  {actionLoading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={[styles.modalSubmitText, { color: '#fff' }]}>Confirmar Rejeição</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -393,13 +521,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  rejectionInput: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
-    minHeight: 100,
-  },
   actionsContainer: {
     gap: 12,
     marginTop: 8,
@@ -444,6 +565,71 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 12,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  modalDescription: {
+    fontSize: 14,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 120,
+    marginBottom: 8,
+  },
+  modalCharCount: {
+    fontSize: 12,
+    textAlign: 'right',
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalSubmitButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalSubmitText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
